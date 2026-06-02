@@ -1,0 +1,2673 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover"/>
+<meta name="apple-mobile-web-app-capable" content="yes"/>
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"/>
+<meta name="apple-mobile-web-app-title" content="Feed Me"/>
+<meta name="theme-color" content="#090f14"/>
+<title>Feed Me</title>
+<link rel="manifest" href="manifest.json"/>
+<link rel="apple-touch-icon" href="icon-180.png"/>
+<link rel="icon" type="image/png" sizes="192x192" href="icon-192.png"/>
+<link rel="icon" type="image/png" sizes="512x512" href="icon-512.png"/>
+<link rel="preconnect" href="https://fonts.googleapis.com"/>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;600;700&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet"/>
+<style>
+  *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+  :root{
+    --bg:#090f14;--surface:#0d1820;--surface2:#0a1520;
+    --border:#1e3040;--border2:#1a2530;
+    --text:#c8dde8;--text-dim:#6a8a9a;--text-mute:#6a8a9a;
+    --accent:#3d8fc4;--accent2:#7ec8e3;
+    --green:#5cb85c;--amber:#f0ad4e;--red:#d9534f;--danger:#ff6b6b;
+    --safe-top:env(safe-area-inset-top,0px);--safe-bot:env(safe-area-inset-bottom,0px);
+  }
+  html,body{background:var(--bg);color:var(--text);font-family:'DM Sans',sans-serif;
+    min-height:100dvh;-webkit-tap-highlight-color:transparent;overscroll-behavior:none}
+  #app{max-width:600px;margin:0 auto;
+    padding:calc(var(--safe-top) + 40px) 16px calc(var(--safe-bot) + 100px);min-height:100dvh}
+
+  /* Header */
+  .header{margin-bottom:22px}
+  .header-meta{display:flex;align-items:center;gap:8px;font-family:'DM Mono',monospace;
+    font-size:17px;color:var(--accent);letter-spacing:.12em;text-transform:uppercase;margin-bottom:4px}
+  .header-meta span{color:var(--border)}.header-meta em{color:var(--text-mute);font-style:normal}
+  .header-row{display:flex;justify-content:space-between;align-items:flex-start}
+  .header h1{font-size:40px;font-weight:700;color:#e8f4fc;letter-spacing:-.02em}
+  .add-food-btn{
+    display:flex;align-items:center;gap:6px;background:linear-gradient(135deg,#1a4a6e,#2a6a9e);
+    border:none;border-radius:10px;color:var(--text);padding:9px 14px;cursor:pointer;
+    font-family:'DM Sans',sans-serif;font-weight:600;font-size:22px;
+    -webkit-tap-highlight-color:transparent;flex-shrink:0;transition:opacity .15s
+  }
+  .add-food-btn:active{opacity:.72}
+  .add-food-btn svg{width:20px;height:20px;stroke:currentColor;fill:none;stroke-width:2.2}
+  .save-status{font-family:'DM Mono',monospace;font-size:17px;color:var(--text-mute);
+    margin-top:5px;display:flex;align-items:center;gap:5px}
+  .save-dot{width:6px;height:6px;border-radius:50%;background:var(--green);
+    flex-shrink:0;transition:background .3s}
+  .save-dot.stale{background:var(--amber)}
+
+  /* Tab bar */
+  .tabbar{position:fixed;bottom:0;left:0;right:0;background:rgba(9,15,20,.94);
+    backdrop-filter:blur(20px) saturate(1.6);-webkit-backdrop-filter:blur(20px) saturate(1.6);
+    border-top:1px solid var(--border2);display:flex;padding-bottom:var(--safe-bot);z-index:100}
+  .tab-btn{flex:1;padding:12px 0 10px;background:none;border:none;
+    font-family:'DM Mono',monospace;font-size:17px;letter-spacing:.08em;text-transform:uppercase;
+    color:var(--text-mute);cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:4px;transition:color .2s}
+  .tab-btn.active{color:var(--accent2)}
+  .tab-btn svg{width:22px;height:22px;stroke-width:1.8;fill:none;stroke:currentColor}
+
+  /* Cards */
+  .card{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:16px;margin-bottom:14px}
+  .card-label{font-family:'DM Mono',monospace;font-size:17px;color:var(--text-mute);
+    letter-spacing:.1em;text-transform:uppercase;margin-bottom:12px}
+
+  /* Macro bars */
+  .macro-row{margin-bottom:16px}.macro-row:last-child{margin-bottom:0}
+  .macro-row-clickable{cursor:pointer;-webkit-tap-highlight-color:transparent;
+    border-radius:8px;padding:6px;margin:-6px -6px 10px;transition:background .15s}
+  .macro-row-clickable:active{background:rgba(255,255,255,.04)}
+  .macro-meta{display:flex;justify-content:space-between;align-items:baseline;
+    font-family:'DM Mono',monospace;font-size:24px;color:var(--text-mute);margin-bottom:8px}
+  .macro-val{color:var(--text);font-size:24px;font-weight:600}
+  .macro-val.over{color:var(--danger)}
+  .macro-chevron{display:inline-block;font-size:14px;color:var(--text-mute);
+    margin-left:6px;transition:transform .2s;transform:translateY(-2px)}
+  .macro-row.expanded .macro-chevron{transform:translateY(-2px) rotate(90deg)}
+  .bar-track{height:8px;background:#1a2530;border-radius:4px;overflow:hidden}
+  .bar-fill{height:100%;border-radius:4px;transition:width .45s cubic-bezier(.4,0,.2,1)}
+  .macro-card{padding:22px}
+  /* Breakdown shown when a macro row is tapped. Bars use the macro's color
+     and represent each food's share of that macro for the day. */
+  .macro-breakdown{margin-top:12px;padding:10px 8px 4px;border-left:2px solid var(--border);
+    margin-left:4px}
+  .macro-breakdown-row{margin-bottom:10px}
+  .macro-breakdown-row:last-child{margin-bottom:2px}
+  .macro-breakdown-meta{display:flex;justify-content:space-between;align-items:baseline;
+    font-family:'DM Mono',monospace;font-size:15px;color:var(--text-mute);margin-bottom:4px;gap:8px}
+  .macro-breakdown-name{color:var(--text);font-family:'DM Sans',sans-serif;font-size:17px;
+    font-weight:500;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1;min-width:0}
+  .macro-breakdown-val{flex-shrink:0;color:var(--text-mute)}
+  .macro-breakdown-track{height:5px}
+  .macro-breakdown-empty{font-family:'DM Mono',monospace;font-size:14px;
+    color:var(--text-mute);padding:4px 0}
+
+  /* History tab */
+  .history-range-row{display:flex;gap:8px;margin-bottom:14px}
+  .history-range-btn{flex:1;background:none;border:1px solid var(--border);
+    border-radius:8px;color:var(--text-mute);font-family:'DM Mono',monospace;
+    font-size:15px;padding:8px 0;cursor:pointer;letter-spacing:.06em;
+    text-transform:uppercase;-webkit-tap-highlight-color:transparent;transition:all .15s}
+  .history-range-btn.active{border-color:#2e5070;color:var(--accent2);background:var(--surface)}
+  .history-day{background:var(--surface);border:1px solid var(--border);border-radius:12px;
+    padding:14px 16px;margin-bottom:10px}
+  .history-day-header{cursor:pointer;-webkit-tap-highlight-color:transparent}
+  .history-day-meta{display:flex;justify-content:space-between;align-items:baseline;
+    margin-bottom:8px}
+  .history-day-label{font-family:'DM Sans',sans-serif;font-size:20px;font-weight:600;color:var(--text)}
+  .history-day.expanded .history-day-meta .macro-chevron{transform:translateY(-2px) rotate(90deg)}
+  .history-chips{display:flex;flex-wrap:wrap;gap:6px 10px;
+    font-family:'DM Mono',monospace;font-size:15px;color:var(--text)}
+  .history-chip{color:var(--text)}
+  .history-chip.over{color:var(--danger)}
+  .history-chip-target{color:var(--text-mute)}
+  .history-foods{margin-top:12px;padding-top:10px;border-top:1px solid var(--border)}
+  .history-food-row{display:flex;justify-content:space-between;align-items:flex-start;
+    padding:8px 0;border-bottom:1px solid var(--border)}
+  .history-food-row:last-child{border-bottom:none}
+  .history-food-info{flex:1;min-width:0;padding-right:10px}
+  .history-food-name{font-family:'DM Sans',sans-serif;font-size:18px;font-weight:500;color:var(--text)}
+  .history-food-sub{font-family:'DM Mono',monospace;font-size:14px;color:var(--text-mute);margin-top:2px}
+  .history-food-amt{font-family:'DM Mono',monospace;font-size:18px;color:var(--accent2);
+    font-weight:600;flex-shrink:0}
+
+  /* Food cards */
+  .food-card{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:13px 14px;margin-bottom:9px}
+  .food-top{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:11px}
+  .food-name{font-size:23px;font-weight:600;color:#ddeeff;margin-bottom:2px}
+  .food-brand{font-size:21px;color:var(--accent2);margin-bottom:3px;
+    font-family:'DM Sans',sans-serif;font-style:italic}
+  .food-sub{font-size:18px;color:var(--text-mute);font-family:'DM Mono',monospace}
+  .food-badge{display:inline-block;font-size:17px;font-family:'DM Mono',monospace;
+    padding:2px 6px;border-radius:4px;margin-left:6px;vertical-align:middle;letter-spacing:.06em}
+  .food-badge.custom{background:#1a2a10;border:1px solid #3a5a20;color:#7ab85c}
+  .food-badge.db{background:#0a1a2a;border:1px solid #1a3a5a;color:var(--text-mute)}
+  .dns-btn{background:none;border:1px solid var(--border);border-radius:6px;color:var(--text-mute);
+    font-size:17px;padding:4px 8px;cursor:pointer;font-family:'DM Mono',monospace;letter-spacing:.06em;
+    white-space:nowrap;flex-shrink:0;margin-left:6px;text-transform:uppercase;transition:all .15s}
+  .dns-btn:active{border-color:var(--danger);color:var(--danger)}
+  .del-btn{background:none;border:1px solid #3a1a1a;border-radius:6px;color:#a04040;
+    font-size:17px;padding:4px 8px;cursor:pointer;font-family:'DM Mono',monospace;
+    white-space:nowrap;flex-shrink:0;margin-left:6px;transition:all .15s}
+  .del-btn:active{border-color:var(--danger);color:var(--danger)}
+  .food-btn-group{display:flex;align-items:center;flex-shrink:0}
+  .food-slider-label{font-family:'DM Mono',monospace;font-size:17px;
+    color:var(--text-mute);letter-spacing:.08em;text-transform:uppercase;
+    margin-bottom:8px;margin-top:4px}
+  .food-portion-row{display:flex;align-items:center;gap:10px}
+  .portion-input{width:120px;background:var(--surface2);
+    border:1px solid #2e5070;border-radius:8px;color:var(--accent2);
+    font-family:'DM Mono',monospace;font-size:31px;font-weight:700;
+    padding:10px 12px;text-align:right;outline:none;
+    -webkit-appearance:none;-moz-appearance:textfield;transition:border-color .2s}
+  .portion-input::-webkit-outer-spin-button,
+  .portion-input::-webkit-inner-spin-button{-webkit-appearance:none;margin:0}
+  .portion-input:focus{border-color:var(--accent)}
+  .portion-unit{font-family:'DM Mono',monospace;font-size:23px;color:var(--text-mute)}
+  .bottom-actions{display:flex;gap:10px;margin-top:18px}
+  .bottom-actions .btn{flex:1;padding:14px;font-size:23px}
+  .food-actions{display:flex;gap:10px;margin-top:12px}
+  .food-actions .btn{flex:1;padding:12px;font-size:18px}
+  .food-per{color:var(--text-mute);font-size:16px;margin-left:6px;
+    text-transform:uppercase;letter-spacing:.06em}
+  .today-grams{font-family:'DM Mono',monospace;font-size:26px;font-weight:700;
+    color:var(--accent2);text-align:right;margin-bottom:8px}
+  .today-actions{display:flex;gap:8px;justify-content:flex-end}
+  .btn-small{background:none;border:1px solid var(--border);border-radius:6px;
+    color:var(--text-mute);font-family:'DM Mono',monospace;font-size:14px;
+    padding:6px 12px;cursor:pointer;letter-spacing:.04em;text-transform:uppercase;
+    -webkit-tap-highlight-color:transparent;transition:all .15s}
+  .btn-small:active{border-color:var(--accent);color:var(--accent2)}
+  .btn-small-danger{border-color:#3a1a1a;color:#a04040}
+  .btn-small-danger:active{border-color:var(--danger);color:var(--danger)}
+  .food-slider-row{display:flex;align-items:center;gap:10px}
+  input[type=range]{flex:1;height:4px;cursor:pointer;-webkit-appearance:none;appearance:none;
+    background:var(--border2);border-radius:2px;accent-color:var(--accent)}
+  input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:22px;height:22px;
+    background:var(--accent);border-radius:50%}
+  input[type=range]::-moz-range-thumb{width:22px;height:22px;background:var(--accent);
+    border-radius:50%;border:none}
+  .gram-badge{background:var(--surface2);border:1px solid #2e5070;border-radius:6px;
+    padding:5px 10px;font-family:'DM Mono',monospace;font-size:22px;
+    color:var(--accent2);min-width:68px;text-align:center}
+
+  /* Buttons */
+  .btn{border:none;border-radius:8px;cursor:pointer;font-family:'DM Sans',sans-serif;font-weight:600;
+    font-size:22px;letter-spacing:.02em;padding:11px 18px;transition:opacity .15s;
+    -webkit-tap-highlight-color:transparent}
+  .btn:active{opacity:.72}
+  .btn-primary{background:linear-gradient(135deg,#1a4a6e,#2a6a9e);color:var(--text)}
+  .btn-green{background:linear-gradient(135deg,#1a4a2e,#2a6a4e);color:var(--text)}
+  .btn-ghost{background:none;border:1px solid var(--border);color:var(--text-mute);font-size:21px}
+  .btn-danger{background:none;border:1px solid #3a1a1a;color:#a04040;font-size:21px}
+  .btn-full{width:100%;padding:13px;font-size:23px}
+  .btn-scan{background:linear-gradient(135deg,#1a3a5e,#1a5a4e);color:var(--accent2)}
+
+  /* Check-in */
+  .checkin-card{display:flex;justify-content:space-between;align-items:center;
+    padding:16px;border-radius:12px;margin-bottom:14px;
+    border:1px solid var(--border);background:var(--surface);transition:background .3s,border-color .3s}
+  .checkin-card.done{background:#0a2010;border-color:#2a6a3a}
+  .checkin-status{font-size:22px;font-weight:600;color:var(--text-dim)}
+  .checkin-card.done .checkin-status{color:var(--green)}
+  .checkin-date{font-size:18px;color:var(--text-mute);font-family:'DM Mono',monospace;margin-top:3px}
+
+  /* Week dots */
+  .week-row{display:flex;gap:5px}
+  .week-day{flex:1;text-align:center}
+  .week-label{font-size:17px;color:var(--text-mute);font-family:'DM Mono',monospace;margin-bottom:5px}
+  .week-dot{height:26px;border-radius:5px;display:flex;align-items:center;justify-content:center;font-size:18px}
+  .week-dot.on{background:linear-gradient(135deg,#1a4a6e,#2a6a9e);border:1px solid var(--accent);color:var(--accent2)}
+  .week-dot.off{background:#0a1520;border:1px solid var(--border2);color:#3a5060}
+
+  /* Daily rows */
+  .daily-row{background:var(--surface);border:1px solid var(--border2);border-radius:10px;
+    padding:12px 14px;margin-bottom:7px;display:flex;justify-content:space-between;align-items:center;gap:10px}
+  .daily-row.edited{border-color:#5a4a1a}
+  .daily-name{font-size:23px;font-weight:600;color:#ddeeff;margin-bottom:2px}
+  .daily-sub{font-size:18px;color:var(--text-mute);font-family:'DM Mono',monospace}
+  .daily-sub .edit-flag{color:var(--amber)}
+  .daily-info{flex:1;min-width:0}
+  .daily-amt{text-align:right;flex-shrink:0}
+  .daily-input-row{display:flex;align-items:center;gap:6px;justify-content:flex-end}
+  .daily-input{width:72px;background:var(--surface2);border:1px solid var(--border);
+    border-radius:6px;color:var(--accent2);font-family:'DM Mono',monospace;
+    font-size:26px;font-weight:700;padding:6px 8px;text-align:right;outline:none;
+    -webkit-appearance:none;-moz-appearance:textfield}
+  .daily-input::-webkit-outer-spin-button,.daily-input::-webkit-inner-spin-button{
+    -webkit-appearance:none;margin:0}
+  .daily-input:focus{border-color:var(--accent)}
+  .daily-unit{font-size:18px;color:var(--text-mute);font-family:'DM Mono',monospace}
+  .daily-macros{font-size:17px;color:var(--text-mute);font-family:'DM Mono',monospace;margin-top:3px}
+  .reset-intake{background:none;border:none;color:var(--text-mute);font-size:17px;
+    font-family:'DM Mono',monospace;cursor:pointer;text-decoration:underline;
+    margin-top:3px;padding:0}
+  .reset-intake:active{color:var(--accent2)}
+
+  /* Weight card */
+  .weight-row{display:flex;align-items:center;gap:10px}
+  .weight-input{flex:1;background:var(--surface2);border:1px solid var(--border);
+    border-radius:8px;color:var(--text);font-family:'DM Mono',monospace;
+    font-size:26px;padding:11px 12px;outline:none;-webkit-appearance:none;
+    -moz-appearance:textfield}
+  .weight-input::-webkit-outer-spin-button,.weight-input::-webkit-inner-spin-button{
+    -webkit-appearance:none;margin:0}
+  .weight-input:focus{border-color:var(--accent)}
+  .weight-unit{font-family:'DM Mono',monospace;font-size:22px;color:var(--text-mute)}
+  .weight-trend{display:flex;justify-content:space-between;margin-top:10px;
+    font-family:'DM Mono',monospace;font-size:18px;color:var(--text-mute)}
+  .weight-trend .v{color:var(--accent2)}
+  .weight-trend .down{color:var(--green)}
+  .weight-trend .up{color:var(--amber)}
+
+  /* Totals */
+  .totals-row{background:var(--surface2);border:1px solid var(--border);border-radius:10px;
+    padding:14px;margin-top:12px;display:flex;justify-content:space-around;text-align:center}
+  .total-val{font-size:27px;font-weight:700;font-family:'DM Mono',monospace}
+  .total-lbl{font-size:17px;color:var(--text-mute);font-family:'DM Mono',monospace;letter-spacing:.08em;margin-top:2px}
+  .totals-note{text-align:center;font-family:'DM Mono',monospace;font-size:17px;
+    color:var(--text-mute);margin-top:8px}
+
+  /* Settings */
+  .setting-row{display:flex;justify-content:space-between;align-items:center;
+    padding:13px 0;border-bottom:1px solid var(--border2);gap:12px}
+  .setting-row:last-child{border-bottom:none;padding-bottom:0}
+  .setting-label{font-size:23px;color:var(--text);font-weight:600}
+  .setting-sub{font-size:18px;color:var(--text-mute);font-family:'DM Mono',monospace;margin-top:2px}
+
+  /* Targets info */
+  .targets-info{background:#0a1820;border:1px solid #1a3040;border-radius:10px;
+    padding:14px;font-size:22px;color:var(--text-mute);line-height:1.75;margin-bottom:14px}
+  .targets-info strong{color:var(--accent2)}
+
+  /* Section label */
+  .section-label{font-family:'DM Mono',monospace;font-size:17px;color:var(--text-mute);
+    letter-spacing:.1em;text-transform:uppercase;margin-bottom:10px}
+
+  /* Empty */
+  .empty{text-align:center;padding:48px 20px;color:var(--text-mute);font-size:23px;line-height:1.8}
+
+  /* Toast — sits well clear of both the header and the tab bar.
+     max-width keeps it from spilling off-screen for long food names. */
+  #toast{position:fixed;bottom:calc(var(--safe-bot) + 150px);left:50%;
+    transform:translateX(-50%) translateY(220px);
+    max-width:min(86vw,420px);
+    background:#0d2010;border:1px solid #2a5a2a;color:var(--green);
+    font-family:'DM Mono',monospace;font-size:17px;padding:11px 20px;border-radius:24px;
+    z-index:500;transition:transform .3s cubic-bezier(.4,0,.2,1);pointer-events:none;
+    white-space:nowrap;overflow:hidden;text-overflow:ellipsis;text-align:center}
+  #toast.show{transform:translateX(-50%) translateY(0)}
+  #toast.error{background:#200d0d;border-color:#5a2a2a;color:var(--danger)}
+
+  /* Modal */
+  .modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.75);
+    z-index:300;display:flex;align-items:flex-end}
+  .modal{background:#0f1e2a;border:1px solid var(--border);
+    border-radius:16px 16px 0 0;
+    padding:24px 20px calc(24px + var(--safe-bot));
+    width:100%;max-width:600px;margin:0 auto;max-height:90dvh;overflow-y:auto}
+  .modal h2{font-size:29px;color:#ddeeff;margin-bottom:8px;font-weight:700}
+  .modal p{font-size:22px;color:var(--text-mute);line-height:1.7;margin-bottom:18px}
+  .modal-actions{display:flex;gap:10px;flex-wrap:wrap}
+  .modal-actions .btn{flex:1;min-width:100px}
+
+  /* Form fields */
+  .field{margin-bottom:14px}
+  .field label{display:block;font-family:'DM Mono',monospace;font-size:17px;
+    color:var(--text-mute);letter-spacing:.1em;text-transform:uppercase;margin-bottom:6px}
+  .field input,.field select{width:100%;background:var(--surface2);border:1px solid var(--border);
+    border-radius:8px;color:var(--text);font-family:'DM Sans',sans-serif;font-size:26px;
+    padding:11px 12px;outline:none;transition:border-color .2s;-webkit-appearance:none}
+  .field input:focus,.field select:focus{border-color:var(--accent)}
+  .field input::placeholder{color:var(--text-mute)}
+  .field-row{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+  .field-row3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px}
+
+  /* Scanner overlay */
+  #scanner-overlay{position:fixed;inset:0;background:#000;z-index:400;
+    display:flex;flex-direction:column;align-items:center;justify-content:center}
+  #scanner-video{width:100%;max-width:600px;height:100dvh;object-fit:cover}
+  .scanner-ui{position:absolute;inset:0;display:flex;flex-direction:column;
+    align-items:center;justify-content:center;pointer-events:none}
+  .scanner-frame{width:240px;height:160px;border:2px solid var(--accent2);border-radius:12px;
+    box-shadow:0 0 0 9999px rgba(0,0,0,.55)}
+  .scanner-line{position:absolute;width:200px;height:2px;background:var(--accent);
+    border-radius:1px;animation:scan 2s ease-in-out infinite}
+  @keyframes scan{0%{transform:translateY(-60px)}50%{transform:translateY(60px)}100%{transform:translateY(-60px)}}
+  .scanner-label{margin-top:24px;font-family:'DM Mono',monospace;font-size:21px;
+    color:var(--accent2);letter-spacing:.08em;text-align:center;padding:0 20px}
+  .scanner-close{position:absolute;top:calc(var(--safe-top) + 16px);right:20px;
+    background:rgba(0,0,0,.6);border:1px solid var(--border);border-radius:50%;
+    width:40px;height:40px;display:flex;align-items:center;justify-content:center;
+    cursor:pointer;pointer-events:all;color:var(--text)}
+  .scanner-close svg{width:18px;height:18px;stroke:currentColor;fill:none;stroke-width:2}
+  .scanner-manual{position:absolute;bottom:calc(var(--safe-bot) + 32px);
+    pointer-events:all;text-align:center}
+  .scanner-status{position:absolute;top:calc(var(--safe-top) + 70px);
+    font-family:'DM Mono',monospace;font-size:18px;color:var(--accent2);
+    letter-spacing:.08em;text-align:center;padding:0 20px}
+
+  /* Lookup result */
+  .lookup-result{background:#0a1820;border:1px solid var(--accent);border-radius:10px;
+    padding:14px;margin-bottom:16px}
+  .lookup-name{font-size:26px;font-weight:700;color:#ddeeff;margin-bottom:4px}
+  .lookup-brand{font-size:21px;color:var(--text-mute);font-family:'DM Mono',monospace;margin-bottom:10px}
+  .lookup-macros{display:flex;gap:12px;flex-wrap:wrap}
+  .lookup-macro{font-family:'DM Mono',monospace;font-size:18px;color:var(--accent2)}
+  .lookup-macro span{color:var(--text-mute)}
+
+  /* Search results */
+  .search-result{display:block;width:100%;text-align:left;
+    background:var(--surface);border:1px solid var(--border);border-radius:10px;
+    padding:14px 14px;margin-bottom:8px;color:var(--text);
+    font-family:'DM Sans',sans-serif;cursor:pointer;
+    -webkit-tap-highlight-color:transparent;transition:border-color .15s,background .15s}
+  .search-result:active{border-color:var(--accent);background:#0d2030}
+  .search-result-name{font-size:19px;font-weight:600;color:#ddeeff;margin-bottom:2px}
+  .search-result-brand{font-size:15px;color:var(--accent2);font-style:italic;margin-bottom:4px}
+  .search-result-macros{font-family:'DM Mono',monospace;font-size:14px;color:var(--text-mute)}
+  .search-result-tag{display:inline-block;font-family:'DM Mono',monospace;font-size:11px;
+    padding:2px 6px;border-radius:4px;margin-left:6px;vertical-align:middle;letter-spacing:.06em;
+    border:1px solid}
+  .tag-builtin{background:#1a2a10;border-color:#3a5a20;color:#7ab85c}
+  .tag-usda{background:#10202a;border-color:#1a3a5a;color:#7ec8e3}
+  .tag-off{background:#2a2010;border-color:#5a4a20;color:#cc9966}
+
+  #file-import{display:none}
+  ::-webkit-scrollbar{width:3px}
+  ::-webkit-scrollbar-track{background:transparent}
+  ::-webkit-scrollbar-thumb{background:var(--border);border-radius:2px}
+</style>
+</head>
+<body>
+<div id="toast">Saved</div>
+<div id="app"></div>
+<div id="scanner-overlay" style="display:none">
+  <video id="scanner-video" autoplay playsinline muted></video>
+  <div class="scanner-ui">
+    <div class="scanner-status" id="scanner-status">Point at a barcode</div>
+    <div class="scanner-frame"></div>
+    <div class="scanner-line"></div>
+    <div class="scanner-label">Hold steady — scanning automatically</div>
+  </div>
+  <button class="scanner-close" aria-label="Close scanner" onclick="closeScanner()">
+    <svg viewBox="0 0 24 24"><path d="M18 6L6 18M6 6l12 12"/></svg>
+  </button>
+  <div class="scanner-manual">
+    <button class="btn btn-ghost" onclick="closeScanner();openAddManual()">Enter UPC manually instead</button>
+  </div>
+</div>
+<input type="file" id="file-import" accept=".json" onchange="importData(event)"/>
+
+<nav class="tabbar">
+  <button class="tab-btn active" data-tab="today" onclick="switchTab('today')" aria-label="Today tab">
+    <svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></svg>Today
+  </button>
+  <button class="tab-btn" data-tab="history" onclick="switchTab('history')" aria-label="History tab">
+    <svg viewBox="0 0 24 24"><path d="M3 12a9 9 0 1 0 3-6.7"/><path d="M3 4v5h5"/><path d="M12 7v5l3 2"/></svg>History
+  </button>
+  <button class="tab-btn" data-tab="foods" onclick="switchTab('foods')" aria-label="Foods tab">
+    <svg viewBox="0 0 24 24"><path d="M3 6h18M3 12h18M3 18h18"/></svg>Foods
+  </button>
+  <button class="tab-btn" data-tab="settings" onclick="switchTab('settings')" aria-label="Settings tab">
+    <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M4.22 4.22l2.12 2.12M17.66 17.66l2.12 2.12M2 12h3M19 12h3M4.22 19.78l2.12-2.12M17.66 6.34l2.12-2.12"/></svg>Settings
+  </button>
+</nav>
+
+<script data-cfasync="false">
+// data-cfasync="false" opts out of Cloudflare Rocket Loader, which otherwise
+// rewrites inline scripts asynchronously and can leave the page blank.
+
+// ── Schema ────────────────────────────────────────────────────────────────────
+// v4 changes over v3:
+//   - Storage key is now version-free ("recomp"); migrations fall back to legacy keys.
+//   - STATE.profile replaces hardcoded STATS; targets are computed from it.
+//   - calcTargets uses the sex field; protein/lb and fat % are configurable.
+//   - STATE.log entries are now objects: { done, weight?, intake? } instead of bool.
+//   - Per-day intake overrides allow logging actual eaten amounts vs the template.
+const SCHEMA_VERSION = 4;
+const STORAGE_KEY    = "recomp";
+// USDA FoodData Central API key. Personal key — free tier covers
+// 1000 requests/hour. Visible in source on the deployed file; rotate at
+// api.data.gov if it ever gets abused.
+const USDA_API_KEY = "fMFN1cFVtyOpL0q21eFgGtEisA36K609w1jOCbNK";
+// Read order: current key first, then legacy keys in newest-to-oldest order.
+const LEGACY_KEYS    = ["recomp_v3", "recomp_v2"];
+
+// ── HTML escape (XSS guard) ───────────────────────────────────────────────────
+// Every interpolation of user-supplied or third-party text into innerHTML
+// must go through this. Built-in DB strings are safe but routed through it
+// anyway for consistency.
+function esc(s) {
+  if (s === null || s === undefined) return "";
+  return String(s)
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#39;");
+}
+
+// Build a JS string literal safe for embedding inside a double-quoted HTML
+// attribute. JSON.stringify gives us '"c_123"', but those raw " chars would
+// close the oninput="…" attribute early. Routing through esc() turns them
+// into &quot; entities; the browser decodes them back to " before executing.
+function jsLit(s) { return esc(JSON.stringify(String(s))); }
+
+// ── Built-in food DB (per 100g/ml) ────────────────────────────────────────────
+// Intentionally empty — all foods are added by the user via barcode scan
+// or manual entry. The data structures (selectFoods, optimizePortions) still
+// expect this constant to exist as an array.
+const BUILTIN_DB = [];
+
+// ── Profile & targets ─────────────────────────────────────────────────────────
+const DEFAULT_PROFILE = {
+  weightLbs: 210,
+  heightIn:  71,
+  age:       50,
+  sex:       "male",         // "male" | "female"
+  activity:  "active",       // sedentary | light | moderate | active | veryActive
+  proteinPerLb: 0.85,
+  fatPct:    0.28,           // fraction of calories from fat
+  sodiumMg:  2300,           // daily sodium target in mg (FDA reference)
+};
+
+// Mifflin-St Jeor with sex constant.
+function calcTargets(p) {
+  const wKg = p.weightLbs * 0.453592;
+  const hCm = p.heightIn  * 2.54;
+  const sexConst = p.sex === "female" ? -161 : 5;
+  const bmr = 10*wKg + 6.25*hCm - 5*p.age + sexConst;
+  const af  = {sedentary:1.2, light:1.375, moderate:1.55, active:1.725, veryActive:1.9};
+  const cal = Math.round(bmr * (af[p.activity] || 1.55));
+  const prot = Math.round(p.weightLbs * (p.proteinPerLb || 0.85));
+  const fat  = Math.round((cal * (p.fatPct || 0.28)) / 9);
+  const carb = Math.max(0, Math.round((cal - prot*4 - fat*9) / 4));
+  const na   = Math.round(p.sodiumMg || 2300);
+  return {cal, prot, fat, carb, na};
+}
+
+// ── Food helpers ──────────────────────────────────────────────────────────────
+function getAllFoods() {
+  return [...BUILTIN_DB, ...(STATE.customFoods || [])];
+}
+
+function selectFoods(dnsIds) {
+  const dns = new Set((dnsIds || []).map(String));
+  const allCustom = (STATE.customFoods || []).filter(f => !dns.has(String(f.id)));
+  const avail = BUILTIN_DB.filter(f => !dns.has(String(f.id)));
+  const protein = avail.filter(f => f.p >= 10).sort((a,b) => b.p/b.cal - a.p/a.cal).slice(0,4);
+  const carbs   = avail.filter(f => f.c >= 15 && f.p < 10).sort((a,b) => b.c - a.c).slice(0,2);
+  // Pick one fat-dense food so the optimizer has a real fat lever, otherwise
+  // calorie targets are unreachable without huge carb portions.
+  const fatSrc  = avail.filter(f => f.f >= 30 && !protein.find(p => p.id === f.id))
+                       .sort((a,b) => b.f - a.f).slice(0,1);
+  const veggie  = avail.filter(f => f.cal < 50 && f.p >= 2 && !protein.find(p => p.id === f.id)).slice(0,1);
+  return [...protein, ...carbs, ...fatSrc, ...veggie, ...allCustom];
+}
+
+// ── Optimizer ─────────────────────────────────────────────────────────────────
+// Pragmatic constraint solver. Starts each food at a sensible default portion,
+// then iteratively scales the leanest protein food to hit protein and the
+// largest carb food to hit calories. Fat falls out and is reported on the bars.
+function optimizePortions(foods, targets) {
+  const portions = {};
+
+  const proteins = foods.filter(f => f.p >= 10);
+  const carbs    = foods.filter(f => f.c >= 15 && f.p < 10);
+  const veggies  = foods.filter(f => f.cal < 50 && f.p < 10);
+  // Anything else (fat-dense, oils, drinks) lands here
+  const others   = foods.filter(f =>
+    !proteins.includes(f) && !carbs.includes(f) && !veggies.includes(f));
+
+  function defaultPortion(f) {
+    if (f.unit === "ml")  return 200;     // drinks
+    if (f.cal >= 500)     return 30;      // nut butter, oils, nuts
+    if (f.p >= 25)        return 150;     // lean meat / fish
+    if (f.p >= 10)        return 150;     // eggs, dairy, beans
+    if (f.c >= 50)        return 60;      // dry grains
+    if (f.c >= 15)        return 150;     // cooked carbs, starchy veg
+    return 100;
+  }
+
+  foods.forEach(f => { portions[String(f.id)] = defaultPortion(f); });
+
+  const totals = () => foods.reduce((a, f) => {
+    const g = portions[String(f.id)] || 0;
+    return {cal:a.cal + f.cal*g/100, p:a.p + f.p*g/100, c:a.c + f.c*g/100, f:a.f + f.f*g/100};
+  }, {cal:0, p:0, c:0, f:0});
+
+  // Fat-dominant = more than half its calories from fat. Catches peanut
+  // butter and almonds even though they have non-trivial protein.
+  const fatFoods = foods.filter(f => f.cal > 0 && (f.f * 9) / f.cal > 0.5);
+  const proteinsByLean = proteins.slice().sort((a,b) => b.p/b.cal - a.p/a.cal);
+  const fatDensest     = fatFoods.length ? fatFoods.slice().sort((a,b) => b.f - a.f)[0] : null;
+  const carbsByDensity = carbs.slice().sort((a,b) => b.cal - a.cal);
+  // Dense dry grains (rice, oats, quinoa) get a higher cap than softer carbs;
+  // 400g dry rice yields ~5.5 cups cooked — large but achievable across meals.
+  const carbCapFor     = f => (f.cal >= 300 ? 400 : 500);
+
+  function adjustProtein() {
+    if (!proteins.length) return;
+    for (let i = 0; i < 4; i++) {
+      const gap = targets.prot - totals().p;
+      if (Math.abs(gap) < 5) break;
+      let remaining = gap;
+      for (const food of proteinsByLean) {
+        if (Math.abs(remaining) < 5) break;
+        const pid = String(food.id);
+        const cur = portions[pid] || 0;
+        const adj = Math.round((remaining / (food.p/100)) / 10) * 10;
+        const next = Math.max(50, Math.min(400, cur + adj));
+        remaining -= (next - cur) * food.p / 100;
+        portions[pid] = next;
+      }
+      if (Math.abs(remaining - gap) < 1) break;
+    }
+  }
+
+  function adjustFat() {
+    if (!fatDensest) return;
+    const fid = String(fatDensest.id);
+    for (let i = 0; i < 4; i++) {
+      const gap = targets.fat - totals().f;
+      if (Math.abs(gap) < 5) break;
+      const adj = Math.round((gap / (fatDensest.f/100)) / 5) * 5;
+      portions[fid] = Math.max(5, Math.min(120, (portions[fid] || 0) + adj));
+    }
+  }
+
+  function adjustCarbs() {
+    if (!carbs.length) return;
+    for (let i = 0; i < 4; i++) {
+      const gap = targets.cal - totals().cal;
+      if (Math.abs(gap) < 50) break;
+      let remaining = gap;
+      for (const food of carbsByDensity) {
+        if (Math.abs(remaining) < 50) break;
+        const cid = String(food.id);
+        const cur = portions[cid] || 0;
+        const adj = Math.round((remaining / (food.cal/100)) / 10) * 10;
+        const next = Math.max(20, Math.min(carbCapFor(food), cur + adj));
+        remaining -= (next - cur) * food.cal / 100;
+        portions[cid] = next;
+      }
+      if (Math.abs(remaining - gap) < 1) break;
+    }
+  }
+
+  // Iterate to convergence: each macro's adjustment perturbs the others
+  // (rice adds protein, peanut butter adds calories), so cycle until stable.
+  // Three outer passes is enough to settle in practice. Final pass is a
+  // protein trim only — calories may end up under target if food selection
+  // can't realistically hit it.
+  for (let outer = 0; outer < 3; outer++) {
+    adjustProtein();
+    adjustFat();
+    adjustCarbs();
+  }
+  adjustProtein();
+
+  return portions;
+}
+
+function calcTotals(foods, portions) {
+  return foods.reduce((a, f) => {
+    const g = portions[String(f.id)] || 0;
+    return {cal:a.cal + (f.cal/100)*g, p:a.p + (f.p/100)*g,
+            c:a.c + (f.c/100)*g,  f:a.f + (f.f/100)*g};
+  }, {cal:0, p:0, c:0, f:0});
+}
+
+// ── State ─────────────────────────────────────────────────────────────────────
+function todayKey() { return new Date().toISOString().slice(0,10); }
+
+function freshState() {
+  const profile = {...DEFAULT_PROFILE};
+  const targets = calcTargets(profile);
+  const foods = selectFoods([]);
+  return {
+    schemaVersion: SCHEMA_VERSION,
+    profile,
+    dnsIds: [],
+    portions: optimizePortions(foods, targets),
+    log: {},
+    customFoods: [],
+    savedAt: null,
+  };
+}
+
+// Migration walks forward from any older shape. Each step is additive and safe.
+function migrate(s) {
+  if (!s || typeof s !== "object") return freshState();
+  if (!s.schemaVersion) s.schemaVersion = 1;
+  if (s.schemaVersion < 2) {
+    if (!s.savedAt) s.savedAt = null;
+    s.schemaVersion = 2;
+  }
+  if (s.schemaVersion < 3) {
+    if (!s.customFoods) s.customFoods = [];
+    s.schemaVersion = 3;
+  }
+  if (s.schemaVersion < 4) {
+    // Add profile from defaults (old STATS was a const, never persisted).
+    if (!s.profile) s.profile = {...DEFAULT_PROFILE};
+    else s.profile = {...DEFAULT_PROFILE, ...s.profile};
+    // Convert log: { day: bool } → { day: { done: bool } }
+    if (s.log && typeof s.log === "object") {
+      const newLog = {};
+      Object.entries(s.log).forEach(([k, v]) => {
+        if (typeof v === "boolean") {
+          // Only retain truthy entries to avoid carrying the daily-open noise forward.
+          if (v) newLog[k] = {done:true};
+        } else if (v && typeof v === "object") {
+          newLog[k] = v;
+        }
+      });
+      s.log = newLog;
+    } else {
+      s.log = {};
+    }
+    s.schemaVersion = 4;
+  }
+  // Backfill any newly-added profile fields (sodium target, etc) on older
+  // states without bumping the schema version — purely additive defaults.
+  if (s.profile) {
+    if (s.profile.sodiumMg === undefined) s.profile.sodiumMg = 2300;
+  }
+  // Fill in any required fields that might be missing.
+  if (!s.portions) s.portions = {};
+  if (!s.dnsIds) s.dnsIds = [];
+  if (!s.customFoods) s.customFoods = [];
+  if (!s.log) s.log = {};
+  return s;
+}
+
+// Rolling snapshot keys: "recomp_snap_YYYY-MM-DD". We keep the last 7 days as
+// disaster-recovery copies. They're written from saveState() (debounced) and
+// consulted by loadState() if the live key is missing or corrupt.
+const SNAPSHOT_PREFIX = "recomp_snap_";
+const SNAPSHOT_KEEP   = 7;
+function snapshotKeyForToday() {
+  const d = new Date();
+  const m = String(d.getMonth() + 1).padStart(2, "0");
+  const day = String(d.getDate()).padStart(2, "0");
+  return SNAPSHOT_PREFIX + d.getFullYear() + "-" + m + "-" + day;
+}
+function listSnapshotKeys() {
+  const keys = [];
+  try {
+    for (let i = 0; i < localStorage.length; i++) {
+      const k = localStorage.key(i);
+      if (k && k.startsWith(SNAPSHOT_PREFIX)) keys.push(k);
+    }
+  } catch (e) {}
+  return keys.sort(); // ISO dates sort lexicographically.
+}
+function pruneOldSnapshots() {
+  const keys = listSnapshotKeys();
+  if (keys.length <= SNAPSHOT_KEEP) return;
+  const drop = keys.slice(0, keys.length - SNAPSHOT_KEEP);
+  for (const k of drop) {
+    try { localStorage.removeItem(k); } catch (e) {}
+  }
+}
+function writeDailySnapshot() {
+  try {
+    localStorage.setItem(snapshotKeyForToday(), JSON.stringify(STATE));
+    pruneOldSnapshots();
+  } catch (e) {
+    // Storage full or unavailable — drop oldest and retry once.
+    const keys = listSnapshotKeys();
+    if (keys.length) {
+      try { localStorage.removeItem(keys[0]); } catch (e) {}
+      try { localStorage.setItem(snapshotKeyForToday(), JSON.stringify(STATE)); } catch (e) {}
+    }
+  }
+}
+
+function loadState() {
+  // 1. Try the current key. If present, that's the live data.
+  try {
+    const r = localStorage.getItem(STORAGE_KEY);
+    if (r) return migrate(JSON.parse(r));
+  } catch (e) {
+    console.warn("Failed to parse current storage key", e);
+  }
+  // 2. No current data — fall back through legacy keys, newest-first.
+  //    On success: migrate forward, write to the current key, and clear the
+  //    legacy entry so we don't pick it up again on the next load.
+  for (const k of LEGACY_KEYS) {
+    try {
+      const r = localStorage.getItem(k);
+      if (r) {
+        const migrated = migrate(JSON.parse(r));
+        try { localStorage.setItem(STORAGE_KEY, JSON.stringify(migrated)); } catch (e) {}
+        try { localStorage.removeItem(k); } catch (e) {}
+        return migrated;
+      }
+    } catch (e) {
+      console.warn("Failed to parse legacy storage key", k, e);
+    }
+  }
+  // 3. Try rolling snapshots, newest first. This is the safety net for cases
+  //    where the live key got cleared, corrupted, or wiped by a bad migration.
+  const snaps = listSnapshotKeys().reverse();
+  for (const k of snaps) {
+    try {
+      const r = localStorage.getItem(k);
+      if (r) {
+        const migrated = migrate(JSON.parse(r));
+        try { localStorage.setItem(STORAGE_KEY, JSON.stringify(migrated)); } catch (e) {}
+        console.warn("Recovered state from snapshot", k);
+        return migrated;
+      }
+    } catch (e) {
+      console.warn("Failed to parse snapshot key", k, e);
+    }
+  }
+  // 4. Nothing — fresh state.
+  return freshState();
+}
+
+// Pre-initialize STATE so functions called during loadState/freshState
+// (selectFoods → STATE.customFoods) don't hit the temporal dead zone.
+let STATE = {
+  schemaVersion: SCHEMA_VERSION,
+  profile: {...DEFAULT_PROFILE},
+  dnsIds: [], portions: {}, log: {}, customFoods: [], savedAt: null,
+};
+STATE = loadState();
+let TARGETS = calcTargets(STATE.profile);
+
+// ── Cloud sync ────────────────────────────────────────────────────────────────
+// Cloud sync state lives under its own localStorage key so it's NEVER pushed
+// to the cloud (the token is the auth credential, not part of synced data).
+const SYNC_KEY = "recomp_sync";
+const SYNC_ENDPOINT_DEFAULT = "/api/sync";
+function freshSync() {
+  return {
+    token: "",
+    endpoint: SYNC_ENDPOINT_DEFAULT,
+    lastPullAt: null,
+    lastPushAt: null,
+    lastError:  null,
+  };
+}
+function loadSync() {
+  try {
+    const r = localStorage.getItem(SYNC_KEY);
+    if (r) return { ...freshSync(), ...JSON.parse(r) };
+  } catch (e) {}
+  return freshSync();
+}
+function saveSync() {
+  try { localStorage.setItem(SYNC_KEY, JSON.stringify(SYNC)); } catch (e) {}
+}
+let SYNC = loadSync();
+
+async function cloudPull() {
+  if (!SYNC.token) return null;
+  try {
+    const res = await fetch(SYNC.endpoint, {
+      method: "GET",
+      headers: { "Authorization": "Bearer " + SYNC.token },
+    });
+    SYNC.lastPullAt = new Date().toISOString();
+    if (res.status === 404) { SYNC.lastError = null; saveSync(); return null; }
+    if (!res.ok) {
+      const body = await res.text().catch(() => "");
+      throw new Error("Pull HTTP " + res.status + (body ? ": " + body.slice(0, 120) : ""));
+    }
+    const data = await res.json();
+    SYNC.lastError = null;
+    saveSync();
+    return data;
+  } catch (e) {
+    SYNC.lastError = e.message || "Pull failed";
+    saveSync();
+    return null;
+  }
+}
+
+async function cloudPush(stateToSend) {
+  if (!SYNC.token) return false;
+  try {
+    const res = await fetch(SYNC.endpoint, {
+      method: "PUT",
+      headers: {
+        "Authorization": "Bearer " + SYNC.token,
+        "content-type": "application/json",
+      },
+      body: JSON.stringify(stateToSend),
+    });
+    SYNC.lastPushAt = new Date().toISOString();
+    if (!res.ok) {
+      const body = await res.text().catch(() => "");
+      throw new Error("Push HTTP " + res.status + (body ? ": " + body.slice(0, 120) : ""));
+    }
+    SYNC.lastError = null;
+    saveSync();
+    return true;
+  } catch (e) {
+    SYNC.lastError = e.message || "Push failed";
+    saveSync();
+    return false;
+  }
+}
+
+// Debounced cloud push — separate from the local save debounce, with a
+// longer delay since a network round-trip is cheap to defer.
+let cloudPushTimer = null;
+function queueCloudPush() {
+  if (!SYNC.token) return;
+  clearTimeout(cloudPushTimer);
+  cloudPushTimer = setTimeout(() => cloudPush(STATE), 1500);
+}
+
+// On app launch: if a token is set, pull the cloud copy. Use whichever copy
+// has the newer savedAt. If we replace local with cloud, save back so both
+// stores agree.
+async function initialCloudPull() {
+  if (!SYNC.token) return;
+  const cloudState = await cloudPull();
+  if (!cloudState) {
+    // Cloud is empty for this token — push our local state so the next
+    // device that pulls finds something.
+    if (STATE.savedAt) cloudPush(STATE);
+    return;
+  }
+  const localT = STATE.savedAt ? Date.parse(STATE.savedAt) : 0;
+  const cloudT = cloudState.savedAt ? Date.parse(cloudState.savedAt) : 0;
+  if (cloudT > localT + 1000) {
+    // Cloud is meaningfully newer — adopt it.
+    STATE = migrate(cloudState);
+    recomputeTargets();
+    try { localStorage.setItem(STORAGE_KEY, JSON.stringify(STATE)); } catch (e) {}
+    render();
+    showToast("Synced from cloud");
+  } else if (localT > cloudT + 1000) {
+    // Local is newer — push it.
+    cloudPush(STATE);
+  }
+}
+
+function recomputeTargets() {
+  TARGETS = calcTargets(STATE.profile);
+}
+
+// ── Save (debounced) ──────────────────────────────────────────────────────────
+let saveTimer;
+function saveState(immediate) {
+  STATE.savedAt = new Date().toISOString();
+  // Save silently — no toast on success. Errors still surface via showToast.
+  // Explicit user actions (adding/removing food, etc.) have their own toasts.
+  const doWrite = () => {
+    try {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(STATE));
+    } catch (e) {
+      showToast("Save failed — storage full?", true);
+    }
+    // Resilience layer: mirror to IndexedDB and rolling snapshots so a single
+    // storage failure mode (Safari ITP wipe, schema bug, browser quota
+    // eviction) can't take everything down with it.
+    writeDailySnapshot();
+    idbWrite(STATE);
+    updateSaveStatus();
+    queueCloudPush();
+  };
+  clearTimeout(saveTimer);
+  if (immediate) doWrite();
+  else           saveTimer = setTimeout(doWrite, 250);
+}
+
+// ── Resilience: IndexedDB mirror + persistent storage ─────────────────────────
+// localStorage on Safari (and to a lesser extent other engines) can be cleared
+// by ITP after a stretch of inactivity. IndexedDB has different eviction rules,
+// so mirroring to it gives us a second pile of bricks to find the data under.
+// Persistent-storage permission, where available (Chrome / Firefox / Edge),
+// tells the browser "don't evict me to free up space."
+const IDB_NAME    = "feedme";
+const IDB_STORE   = "state";
+const IDB_KEY     = "current";
+let idbReadyPromise = null;
+function idbReady() {
+  if (idbReadyPromise) return idbReadyPromise;
+  idbReadyPromise = new Promise((resolve) => {
+    if (typeof indexedDB === "undefined") return resolve(null);
+    let req;
+    try { req = indexedDB.open(IDB_NAME, 1); } catch (e) { return resolve(null); }
+    req.onupgradeneeded = () => {
+      const db = req.result;
+      if (!db.objectStoreNames.contains(IDB_STORE)) db.createObjectStore(IDB_STORE);
+    };
+    req.onsuccess = () => resolve(req.result);
+    req.onerror   = () => resolve(null);
+    req.onblocked = () => resolve(null);
+  });
+  return idbReadyPromise;
+}
+async function idbWrite(state) {
+  const db = await idbReady();
+  if (!db) return;
+  try {
+    const tx = db.transaction(IDB_STORE, "readwrite");
+    tx.objectStore(IDB_STORE).put(JSON.stringify(state), IDB_KEY);
+  } catch (e) {}
+}
+async function idbRead() {
+  const db = await idbReady();
+  if (!db) return null;
+  return new Promise((resolve) => {
+    try {
+      const tx  = db.transaction(IDB_STORE, "readonly");
+      const req = tx.objectStore(IDB_STORE).get(IDB_KEY);
+      req.onsuccess = () => {
+        const v = req.result;
+        if (!v) return resolve(null);
+        try { resolve(JSON.parse(v)); } catch (e) { resolve(null); }
+      };
+      req.onerror = () => resolve(null);
+    } catch (e) { resolve(null); }
+  });
+}
+
+// On startup, if localStorage was empty but IDB has a copy, restore it.
+// Runs after the initial render so the user isn't blocked.
+async function idbRecoverIfNeeded() {
+  // Only consider recovery if STATE looks empty / never-saved.
+  const isEmpty = !STATE.savedAt
+    && (!STATE.customFoods || STATE.customFoods.length === 0)
+    && (!STATE.log || Object.keys(STATE.log).length === 0);
+  if (!isEmpty) return;
+  const recovered = await idbRead();
+  if (!recovered) return;
+  try {
+    STATE = migrate(recovered);
+    recomputeTargets();
+    try { localStorage.setItem(STORAGE_KEY, JSON.stringify(STATE)); } catch (e) {}
+    render();
+    showToast("Recovered data from backup");
+  } catch (e) {
+    console.warn("IDB recovery failed", e);
+  }
+}
+
+// Ask the browser to keep our storage. Silently no-ops where unsupported.
+async function requestPersistentStorage() {
+  try {
+    if (navigator.storage && navigator.storage.persist) {
+      await navigator.storage.persist();
+    }
+  } catch (e) {}
+}
+
+function formatRelative(d) {
+  const diff = Math.floor((Date.now() - d) / 1000);
+  if (diff < 60)    return "just now";
+  if (diff < 3600)  return Math.floor(diff/60) + "m ago";
+  if (diff < 86400) return Math.floor(diff/3600) + "h ago";
+  return new Date(d).toLocaleDateString("en-US", {month:"short", day:"numeric"});
+}
+
+function updateSaveStatus() {
+  const el  = document.getElementById("save-status-text");
+  const dot = document.getElementById("save-dot");
+  if (!el || !dot) return;
+  if (!STATE.savedAt) { el.textContent = "Never saved"; dot.classList.add("stale"); return; }
+  const diffH = (Date.now() - new Date(STATE.savedAt)) / 36e5;
+  dot.classList.toggle("stale", diffH > 24);
+  el.textContent = "Saved " + formatRelative(new Date(STATE.savedAt));
+}
+
+// ── Export / Import ───────────────────────────────────────────────────────────
+function exportData() {
+  // Include timestamp so multiple same-day backups don't collide.
+  const ts = new Date().toISOString().replace(/[:.]/g, "-").slice(0, 19);
+  const blob = new Blob([JSON.stringify(STATE, null, 2)], {type:"application/json"});
+  const url  = URL.createObjectURL(blob);
+  const a    = document.createElement("a");
+  a.href = url;
+  a.download = "feedme-backup-" + ts + ".json";
+  a.click();
+  URL.revokeObjectURL(url);
+  showToast("Backup downloaded");
+}
+function triggerImport() { document.getElementById("file-import").click(); }
+function importData(evt) {
+  const file = evt.target.files[0]; if (!file) return;
+  const reader = new FileReader();
+  reader.onload = e => {
+    try {
+      STATE = migrate(JSON.parse(e.target.result));
+      recomputeTargets();
+      saveState(true); render(); showToast("Backup restored");
+    } catch (err) { showToast("Could not read file", true); }
+    evt.target.value = "";
+  };
+  reader.readAsText(file);
+}
+
+// ── Toast ─────────────────────────────────────────────────────────────────────
+let toastTimer;
+function showToast(msg, isError) {
+  const t = document.getElementById("toast");
+  t.textContent = msg;
+  t.classList.toggle("error", !!isError);
+  t.classList.add("show");
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => t.classList.remove("show"), 2000);
+}
+
+// ── Modal ─────────────────────────────────────────────────────────────────────
+function showModal(html) {
+  closeModal();
+  const el = document.createElement("div"); el.id = "modal-root";
+  el.innerHTML = `<div class="modal-overlay" id="modal-overlay" role="dialog" aria-modal="true" onclick="closeModalOutside(event)"><div class="modal">${html}</div></div>`;
+  document.body.appendChild(el);
+  setTimeout(() => { const inp = el.querySelector("input"); if (inp) inp.focus(); }, 80);
+}
+function closeModal() { const el = document.getElementById("modal-root"); if (el) el.remove(); }
+function closeModalOutside(e) { if (e.target.id === "modal-overlay") closeModal(); }
+
+// ── Routing ───────────────────────────────────────────────────────────────────
+let currentTab = "today";
+function switchTab(tab) {
+  currentTab = tab;
+  document.querySelectorAll(".tab-btn").forEach(b => b.classList.toggle("active", b.dataset.tab === tab));
+  render();
+}
+
+// ── Render ────────────────────────────────────────────────────────────────────
+function render() {
+  document.getElementById("app").innerHTML = headerHTML() + tabContent();
+  updateSaveStatus();
+}
+
+function profileSummary(p) {
+  const ft = Math.floor(p.heightIn / 12);
+  const inch = p.heightIn % 12;
+  const sexLabel = p.sex === "female" ? "F" : "M";
+  return `${sexLabel} · ${p.age}yr · ${p.weightLbs}lb · ${ft}′${inch}″`;
+}
+
+function headerHTML() {
+  // Header removed entirely — content starts at the macro card.
+  return "";
+}
+
+function tabContent() {
+  if (currentTab === "today")    return todayTab();
+  if (currentTab === "history")  return historyTab();
+  if (currentTab === "foods")    return foodsTab();
+  if (currentTab === "settings") return settingsTab();
+  return "";
+}
+
+// Tracks which macro rows are currently expanded. UI-only — intentionally
+// not persisted, so refreshing the app collapses every breakdown.
+const EXPANDED_MACROS = new Set();
+
+function toggleMacroExpansion(label) {
+  if (EXPANDED_MACROS.has(label)) EXPANDED_MACROS.delete(label);
+  else EXPANDED_MACROS.add(label);
+  render();
+}
+
+function macroBarHTML(label, value, target, color, breakdown) {
+  const v = Math.round(value), pct = target > 0 ? Math.min(100, Math.round((v/target)*100)) : 0;
+  const over = target > 0 && v > target*1.05;
+  const unit = label === "KCAL" ? "" : (label === "Sodium" ? "mg" : "g");
+
+  // Build the per-food breakdown panel. Each row's bar is sized as that
+  // food's share of the day's intake for this macro (food / sum-of-foods),
+  // so the bars within a panel are comparable to each other.
+  const items = (breakdown || []).filter(b => b.value > 0);
+  const hasItems = items.length > 0;
+  const expanded = EXPANDED_MACROS.has(label);
+  let breakdownHTML = "";
+  if (expanded) {
+    if (hasItems) {
+      const total = items.reduce((s, b) => s + b.value, 0);
+      const sorted = items.slice().sort((a, b) => b.value - a.value);
+      breakdownHTML = `<div class="macro-breakdown">${sorted.map(b => {
+        const share = total > 0 ? Math.min(100, Math.round((b.value/total)*100)) : 0;
+        const dv = Math.round(b.value);
+        return `<div class="macro-breakdown-row">
+          <div class="macro-breakdown-meta">
+            <span class="macro-breakdown-name">${esc(b.name)}</span>
+            <span class="macro-breakdown-val">${dv}${unit} · ${share}%</span>
+          </div>
+          <div class="bar-track macro-breakdown-track"><div class="bar-fill" style="width:${share}%;background:${color}"></div></div>
+        </div>`;
+      }).join("")}</div>`;
+    } else {
+      breakdownHTML = `<div class="macro-breakdown"><div class="macro-breakdown-empty">Nothing logged for this macro yet.</div></div>`;
+    }
+  }
+
+  const labelLit = jsLit(label);
+  return `<div class="macro-row macro-row-clickable${expanded?" expanded":""}" onclick="toggleMacroExpansion(${labelLit})">
+    <div class="macro-meta"><span>${esc(label)}<span class="macro-chevron">▸</span></span><span class="macro-val${over?" over":""}">${v} / ${target}${unit}</span></div>
+    <div class="bar-track"><div class="bar-fill" style="width:${pct}%;background:${over?"var(--danger)":color}"></div></div>
+    ${breakdownHTML}
+  </div>`;
+}
+
+// ── Foods tab (the database) ──────────────────────────────────────────────────
+// Lists every food you've added via scan or manual entry. Tap "+ Add to Today"
+// on any food to log how many grams you ate of it today.
+function foodsTab() {
+  const foods = STATE.customFoods || [];
+  if (!foods.length) {
+    return `<div class="empty">No foods yet. Scan a barcode or enter one manually to add foods to your database.</div>
+      <div class="bottom-actions">
+        <button class="btn btn-scan" onclick="openAddFood()">+ Add Food</button>
+      </div>`;
+  }
+
+  const today = todayKey();
+  const todayIntake = (STATE.log[today] && STATE.log[today].intake) || {};
+
+  const cards = foods.map(f => {
+    const idLit = jsLit(f.id);
+    const eaten = todayIntake[String(f.id)];
+    const perUnit = f.unit === "ml" ? "per 100ml" : "per 100g";
+    const addLabel = (eaten !== undefined && eaten !== null)
+      ? `Edit Today (${eaten}${esc(f.unit)})`
+      : "+ Add to Today";
+    const naLine = (f.na != null) ? ` · ${f.na}mg Na` : "";
+    const servingLine = f.servingG
+      ? `<div class="food-serving">Serving: ${esc(f.servingG)}${esc(f.unit)}${f.servingLabel ? ` · ${esc(f.servingLabel)}` : ""}</div>`
+      : "";
+    return `<div class="food-card">
+      <div class="food-name">${esc(f.name)} <span class="food-badge custom">CUSTOM</span></div>
+      ${f.brand ? `<div class="food-brand">${esc(f.brand)}</div>` : ""}
+      <div class="food-sub">${f.cal} kcal · ${f.p}g pro · ${f.c}g carb · ${f.f}g fat${naLine} <span class="food-per">${esc(perUnit)}</span></div>
+      ${servingLine}
+      <div class="food-actions">
+        <button class="btn btn-primary" onclick="addToToday(${idLit})">${addLabel}</button>
+        <button class="btn btn-ghost" onclick="openEditFood(${idLit})">Edit</button>
+        <button class="btn btn-danger" onclick="confirmDeleteFood(${idLit})">Delete</button>
+      </div>
+    </div>`;
+  }).join("");
+
+  return cards
+    + `<div class="bottom-actions">
+        <button class="btn btn-scan" onclick="openAddFood()">+ Add Food</button>
+       </div>`;
+}
+
+// ── Today tab (what you ate today) ────────────────────────────────────────────
+// Each day starts empty. Tap "+ Add to Today" on any food in the Foods tab to
+// log grams. Edit or remove rows here.
+function todayTab() {
+  const today  = todayKey();
+  const intake = (STATE.log[today] && STATE.log[today].intake) || {};
+  const all    = getAllFoods();
+
+  // Compute totals AND per-food contributions in one pass. The per-food
+  // entries feed the tap-to-expand breakdown beneath each macro row.
+  const totals = {cal:0, p:0, c:0, f:0, na:0};
+  const perFood = [];
+  Object.entries(intake).forEach(([id, g]) => {
+    const f = all.find(x => String(x.id) === String(id));
+    if (!f || !g) return;
+    const cal = (f.cal/100) * g;
+    const p   = (f.p  /100) * g;
+    const c   = (f.c  /100) * g;
+    const fat = (f.f  /100) * g;
+    const na  = ((f.na || 0)/100) * g;
+    totals.cal += cal; totals.p += p; totals.c += c; totals.f += fat; totals.na += na;
+    perFood.push({ name: f.name, cal, p, c, f: fat, na });
+  });
+  const breakdownFor = (key) => perFood.map(pf => ({ name: pf.name, value: pf[key] }));
+
+  const macroCard = `<div class="card macro-card">
+    ${macroBarHTML("KCAL",    totals.cal, TARGETS.cal,  "var(--accent)",  breakdownFor("cal"))}
+    ${macroBarHTML("Protein", totals.p,   TARGETS.prot, "var(--green)",   breakdownFor("p"))}
+    ${macroBarHTML("Carbs",   totals.c,   TARGETS.carb, "var(--amber)",   breakdownFor("c"))}
+    ${macroBarHTML("Fat",     totals.f,   TARGETS.fat,  "var(--red)",     breakdownFor("f"))}
+    ${macroBarHTML("Sodium",  totals.na,  TARGETS.na,   "var(--accent2)", breakdownFor("na"))}
+  </div>`;
+
+  const ids = Object.keys(intake);
+  if (!ids.length) {
+    return macroCard
+      + `<div class="empty">Nothing logged today.<br>Go to Foods and tap "+ Add to Today" on what you've eaten.</div>
+         <div class="bottom-actions">
+           <button class="btn btn-primary" onclick="switchTab('foods')">Go to Foods →</button>
+         </div>`;
+  }
+
+  const rows = ids.map(id => {
+    const f = all.find(x => String(x.id) === id);
+    if (!f) return "";
+    const g    = intake[id];
+    const kcal = Math.round((f.cal/100) * g);
+    const prot = Math.round((f.p  /100) * g);
+    const idLit = jsLit(id);
+    return `<div class="daily-row">
+      <div class="daily-info">
+        <div class="daily-name">${esc(f.name)}</div>
+        ${f.brand ? `<div class="food-brand">${esc(f.brand)}</div>` : ""}
+        <div class="daily-sub">${kcal} kcal · ${prot}g pro</div>
+      </div>
+      <div class="daily-amt">
+        <div class="today-grams">${g}${esc(f.unit)}</div>
+        <div class="today-actions">
+          <button class="btn-small" onclick="addToToday(${idLit})">Edit</button>
+          <button class="btn-small btn-small-danger" onclick="removeTodayIntake(${idLit})">Remove</button>
+        </div>
+      </div>
+    </div>`;
+  }).join("");
+
+  return macroCard
+    + `<div class="section-label">Today's Intake</div>${rows}
+       <div class="bottom-actions">
+         <button class="btn btn-primary" onclick="switchTab('foods')">+ Add from Foods</button>
+       </div>`;
+}
+
+// ── History tab (past days) ───────────────────────────────────────────────────
+// Lists the most recent days that have any intake, newest first. Each day
+// shows the macro totals vs target; tapping the row expands the food list.
+const HISTORY_DAYS_DEFAULT = 7;
+const EXPANDED_HISTORY_DAYS = new Set();
+let historyRange = HISTORY_DAYS_DEFAULT;
+
+function toggleHistoryDay(dateKey) {
+  if (EXPANDED_HISTORY_DAYS.has(dateKey)) EXPANDED_HISTORY_DAYS.delete(dateKey);
+  else EXPANDED_HISTORY_DAYS.add(dateKey);
+  render();
+}
+
+function setHistoryRange(n) {
+  historyRange = n;
+  render();
+}
+
+function formatHistoryDate(dateKey) {
+  // dateKey is "YYYY-MM-DD"; render as e.g. "Mon, May 19"
+  const [y, m, d] = dateKey.split("-").map(Number);
+  const dt = new Date(y, m - 1, d);
+  return dt.toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric" });
+}
+
+function historyTab() {
+  const log     = STATE.log || {};
+  const today   = todayKey();
+  const all     = getAllFoods();
+
+  // Collect days that actually have intake, newest first.
+  const allDays = Object.keys(log)
+    .filter(k => log[k] && log[k].intake && Object.keys(log[k].intake).length > 0)
+    .sort()
+    .reverse();
+
+  if (!allDays.length) {
+    return `<div class="empty">No history yet.<br>Log some food on the Today tab and it'll show up here.</div>`;
+  }
+
+  // Range filter buttons (7 / 30 / all).
+  const ranges = [
+    [7,   "7 days"],
+    [30,  "30 days"],
+    [Infinity, "All"],
+  ];
+  const rangeBtns = ranges.map(([n, label]) =>
+    `<button class="history-range-btn${historyRange === n ? " active" : ""}" onclick="setHistoryRange(${isFinite(n) ? n : "Infinity"})">${label}</button>`
+  ).join("");
+
+  const days = isFinite(historyRange) ? allDays.slice(0, historyRange) : allDays;
+
+  const dayCards = days.map(dateKey => {
+    const intake = log[dateKey].intake;
+    const ids    = Object.keys(intake);
+    const totals = { cal:0, p:0, c:0, f:0, na:0 };
+    const foodLines = [];
+    ids.forEach(id => {
+      const f = all.find(x => String(x.id) === String(id));
+      if (!f) return;
+      const g = intake[id];
+      const cal = (f.cal/100) * g;
+      const p   = (f.p  /100) * g;
+      const c   = (f.c  /100) * g;
+      const fat = (f.f  /100) * g;
+      const na  = ((f.na || 0)/100) * g;
+      totals.cal += cal; totals.p += p; totals.c += c; totals.f += fat; totals.na += na;
+      foodLines.push({ name: f.name, brand: f.brand || "", unit: f.unit, grams: g,
+        kcal: Math.round(cal), prot: Math.round(p) });
+    });
+
+    const expanded = EXPANDED_HISTORY_DAYS.has(dateKey);
+    const isToday  = dateKey === today;
+    const label    = formatHistoryDate(dateKey) + (isToday ? " · Today" : "");
+
+    // Compact macro chips: "Cal 1820/2200 · P 145/170 · C 200/240 · F 60/72"
+    const chip = (l, v, t, unit) => {
+      const over = t > 0 && v > t * 1.05;
+      return `<span class="history-chip${over ? " over" : ""}">${l} ${Math.round(v)}<span class="history-chip-target">/${t}${unit}</span></span>`;
+    };
+    const chips = [
+      chip("Cal", totals.cal, TARGETS.cal,  ""),
+      chip("P",   totals.p,   TARGETS.prot, "g"),
+      chip("C",   totals.c,   TARGETS.carb, "g"),
+      chip("F",   totals.f,   TARGETS.fat,  "g"),
+    ].join("");
+
+    let foodsHTML = "";
+    if (expanded) {
+      const sorted = foodLines.slice().sort((a, b) => b.kcal - a.kcal);
+      foodsHTML = `<div class="history-foods">${sorted.length
+        ? sorted.map(fl => `<div class="history-food-row">
+            <div class="history-food-info">
+              <div class="history-food-name">${esc(fl.name)}</div>
+              ${fl.brand ? `<div class="food-brand">${esc(fl.brand)}</div>` : ""}
+              <div class="history-food-sub">${fl.kcal} kcal · ${fl.prot}g pro</div>
+            </div>
+            <div class="history-food-amt">${fl.grams}${esc(fl.unit)}</div>
+          </div>`).join("")
+        : `<div class="macro-breakdown-empty">No foods for this day.</div>`
+      }</div>`;
+    }
+
+    const dateLit = jsLit(dateKey);
+    return `<div class="history-day${expanded ? " expanded" : ""}">
+      <div class="history-day-header" onclick="toggleHistoryDay(${dateLit})">
+        <div class="history-day-meta">
+          <span class="history-day-label">${esc(label)}</span>
+          <span class="macro-chevron">▸</span>
+        </div>
+        <div class="history-chips">${chips}</div>
+      </div>
+      ${foodsHTML}
+    </div>`;
+  }).join("");
+
+  return `<div class="history-range-row">${rangeBtns}</div>${dayCards}`;
+}
+
+// ── Settings tab ──────────────────────────────────────────────────────────────
+function settingsTab() {
+  const p = STATE.profile;
+  const savedAt = STATE.savedAt
+    ? new Date(STATE.savedAt).toLocaleString("en-US", {month:"short", day:"numeric", hour:"numeric", minute:"2-digit"})
+    : "Never";
+  const customCount = (STATE.customFoods || []).length;
+  const dayCount    = Object.values(STATE.log || {}).filter(d => d && d.intake && Object.keys(d.intake).length > 0).length;
+  const activityOpts = [
+    ["sedentary",  "Sedentary (desk, no exercise)"],
+    ["light",      "Light (1-2 sessions/wk)"],
+    ["moderate",   "Moderate (3-4 sessions/wk)"],
+    ["active",     "Active (5-6 sessions/wk)"],
+    ["veryActive", "Very Active (daily heavy)"],
+  ].map(([v,l]) => `<option value="${v}" ${p.activity===v?"selected":""}>${esc(l)}</option>`).join("");
+
+  return `
+  <div class="card"><div class="card-label">Your Profile</div>
+    <div class="field-row">
+      <div class="field">
+        <label>Weight (lb)</label>
+        <input type="number" inputmode="decimal" step="0.5" value="${esc(p.weightLbs)}"
+          oninput="updateProfile('weightLbs', this.value)"/>
+      </div>
+      <div class="field">
+        <label>Height (in)</label>
+        <input type="number" inputmode="decimal" step="0.5" value="${esc(p.heightIn)}"
+          oninput="updateProfile('heightIn', this.value)"/>
+      </div>
+    </div>
+    <div class="field-row">
+      <div class="field">
+        <label>Age</label>
+        <input type="number" inputmode="numeric" value="${esc(p.age)}"
+          oninput="updateProfile('age', this.value)"/>
+      </div>
+      <div class="field">
+        <label>Sex</label>
+        <select onchange="updateProfile('sex', this.value)">
+          <option value="male" ${p.sex==="male"?"selected":""}>Male</option>
+          <option value="female" ${p.sex==="female"?"selected":""}>Female</option>
+        </select>
+      </div>
+    </div>
+    <div class="field">
+      <label>Activity</label>
+      <select onchange="updateProfile('activity', this.value)">${activityOpts}</select>
+    </div>
+    <div class="field-row">
+      <div class="field">
+        <label>Protein per lb</label>
+        <input type="number" inputmode="decimal" step="0.05" min="0.5" max="1.5"
+          value="${esc(p.proteinPerLb)}" oninput="updateProfile('proteinPerLb', this.value)"/>
+      </div>
+      <div class="field">
+        <label>Fat % of cal</label>
+        <input type="number" inputmode="numeric" step="1" min="15" max="50"
+          value="${esc(Math.round(p.fatPct*100))}" oninput="updateProfileFatPct(this.value)"/>
+      </div>
+    </div>
+    <div class="field">
+      <label>Sodium target (mg/day)</label>
+      <input type="number" inputmode="numeric" step="50" min="500" max="6000"
+        value="${esc(p.sodiumMg || 2300)}" oninput="updateProfile('sodiumMg', this.value)"/>
+    </div>
+  </div>
+
+  <div class="card"><div class="card-label">Cloud Sync</div>
+    <div class="setting-row">
+      <div>
+        <div class="setting-label">${SYNC.token ? "Sync token (set)" : "Sync token"}</div>
+        <div class="setting-sub">${SYNC.token
+          ? "This device is syncing. Use the same token on other devices to share data."
+          : "Generate a token to enable cross-device sync via Cloudflare KV. See sync.js for the one-time KV setup."}</div>
+      </div>
+      ${SYNC.token
+        ? `<button class="btn btn-ghost" onclick="copySyncToken()">Copy</button>`
+        : `<button class="btn btn-primary" onclick="generateSyncToken()">Generate</button>`}
+    </div>
+    <div class="field">
+      <label>Paste an existing token (to share with another device)</label>
+      <input type="text" id="sync-token-input" value="${esc(SYNC.token)}"
+        placeholder="32 hex characters"
+        autocomplete="off" autocapitalize="off" spellcheck="false"
+        onchange="setSyncToken(this.value)"/>
+    </div>
+    ${SYNC.token ? `
+    <div class="setting-row">
+      <div>
+        <div class="setting-label">Last sync</div>
+        <div class="setting-sub">
+          Pushed: ${SYNC.lastPushAt ? esc(formatRelative(new Date(SYNC.lastPushAt))) : "never"}<br/>
+          Pulled: ${SYNC.lastPullAt ? esc(formatRelative(new Date(SYNC.lastPullAt))) : "never"}
+        </div>
+      </div>
+      <button class="btn btn-ghost" onclick="manualSync()">Sync now</button>
+    </div>
+    ${SYNC.lastError ? `<div class="setting-sub" style="color:var(--amber);margin-top:8px">Last error: ${esc(SYNC.lastError)}</div>` : ""}
+    <div class="setting-row">
+      <div>
+        <div class="setting-label">Disable sync</div>
+        <div class="setting-sub">Removes the token from this device. Data stays in the cloud.</div>
+      </div>
+      <button class="btn btn-danger" onclick="clearSyncToken()">Disable</button>
+    </div>` : ""}
+  </div>
+
+  <div class="card"><div class="card-label">Data &amp; Backup</div>
+    <div class="setting-row"><div><div class="setting-label">Last saved</div><div class="setting-sub">${esc(savedAt)}</div></div></div>
+    <div class="setting-row">
+      <div><div class="setting-label">Export backup</div><div class="setting-sub">Downloads a timestamped .json</div></div>
+      <button class="btn btn-ghost" onclick="exportData()">Export</button>
+    </div>
+    <div class="setting-row">
+      <div><div class="setting-label">Restore backup</div><div class="setting-sub">Load a previously exported .json</div></div>
+      <button class="btn btn-ghost" onclick="triggerImport()">Import</button>
+    </div>
+  </div>
+
+  <div class="card"><div class="card-label">Your Data</div>
+    <div class="setting-row"><div><div class="setting-label">Days logged</div><div class="setting-sub">${dayCount} day${dayCount===1?"":"s"} with intake</div></div></div>
+    <div class="setting-row"><div><div class="setting-label">Custom foods</div><div class="setting-sub">${customCount} food${customCount===1?"":"s"} in database</div></div></div>
+  </div>
+
+  <div class="card"><div class="card-label">Danger Zone</div>
+    <div class="setting-row">
+      <div><div class="setting-label">Reset all data</div><div class="setting-sub">Clears everything — export first</div></div>
+      <button class="btn btn-danger" onclick="confirmReset()">Reset</button>
+    </div>
+  </div>
+  <div style="font-family:'DM Mono',monospace;font-size:17px;color:var(--text-mute);text-align:center;margin-top:16px;line-height:1.9">
+    Schema v${SCHEMA_VERSION} · iOS may clear storage after extended inactivity.<br/>Export regularly.
+  </div>`;
+}
+
+// ── Add Food flow ─────────────────────────────────────────────────────────────
+function openAddFood() {
+  showModal(`
+    <h2>Add Food</h2>
+    <p>Scan a barcode, search by name, or enter nutrition info manually.</p>
+    <div class="modal-actions" style="flex-direction:column;gap:10px">
+      <button class="btn btn-scan btn-full" onclick="closeModal();startScanner()">Scan Barcode</button>
+      <button class="btn btn-primary btn-full" onclick="closeModal();openSearchFoods()">Search by Name</button>
+      <button class="btn btn-ghost btn-full" onclick="closeModal();openAddManual()">Enter Manually</button>
+      <button class="btn btn-ghost btn-full" onclick="closeModal()">Cancel</button>
+    </div>`);
+}
+
+// ── Built-in generic foods library ───────────────────────────────────────────
+// USDA-derived values per 100g, for common whole foods that don't have
+// barcodes. Searched first so basic produce/proteins always have a result
+// even if Open Food Facts' search service is unreachable. Synthetic
+// "g_*" IDs avoid colliding with real UPCs.
+const GENERIC_FOODS = [
+  // Fruits
+  { id: "g_apple",        name: "Apple",                 brand: "raw, with skin",   cal: 52,  p: 0.3, c: 14,   f: 0.2, na: 1 },
+  { id: "g_banana",       name: "Banana",                brand: "raw",              cal: 89,  p: 1.1, c: 23,   f: 0.3, na: 1 },
+  { id: "g_grapes_red",   name: "Grapes, red",           brand: "raw",              cal: 69,  p: 0.7, c: 18,   f: 0.2, na: 2 },
+  { id: "g_grapes_green", name: "Grapes, green",         brand: "raw",              cal: 69,  p: 0.7, c: 18,   f: 0.2, na: 2 },
+  { id: "g_strawberry",   name: "Strawberries",          brand: "raw",              cal: 32,  p: 0.7, c: 8,    f: 0.3, na: 1 },
+  { id: "g_blueberry",    name: "Blueberries",           brand: "raw",              cal: 57,  p: 0.7, c: 14,   f: 0.3, na: 1 },
+  { id: "g_raspberry",    name: "Raspberries",           brand: "raw",              cal: 52,  p: 1.2, c: 12,   f: 0.7, na: 1 },
+  { id: "g_orange",       name: "Orange",                brand: "raw",              cal: 47,  p: 0.9, c: 12,   f: 0.1, na: 0 },
+  { id: "g_pineapple",    name: "Pineapple",             brand: "raw",              cal: 50,  p: 0.5, c: 13,   f: 0.1, na: 1 },
+  { id: "g_mango",        name: "Mango",                 brand: "raw",              cal: 60,  p: 0.8, c: 15,   f: 0.4, na: 1 },
+  { id: "g_watermelon",   name: "Watermelon",            brand: "raw",              cal: 30,  p: 0.6, c: 8,    f: 0.2, na: 1 },
+  { id: "g_peach",        name: "Peach",                 brand: "raw",              cal: 39,  p: 0.9, c: 10,   f: 0.3, na: 0 },
+  { id: "g_pear",         name: "Pear",                  brand: "raw",              cal: 57,  p: 0.4, c: 15,   f: 0.1, na: 1 },
+  { id: "g_avocado",      name: "Avocado",               brand: "raw",              cal: 160, p: 2,   c: 9,    f: 15,  na: 7 },
+  // Vegetables
+  { id: "g_broccoli",     name: "Broccoli",              brand: "raw",              cal: 34,  p: 2.8, c: 7,    f: 0.4, na: 33 },
+  { id: "g_carrots",      name: "Carrots",               brand: "raw",              cal: 41,  p: 0.9, c: 10,   f: 0.2, na: 69 },
+  { id: "g_spinach",      name: "Spinach",               brand: "raw",              cal: 23,  p: 2.9, c: 3.6,  f: 0.4, na: 79 },
+  { id: "g_sweet_potato", name: "Sweet potato",          brand: "raw",              cal: 86,  p: 1.6, c: 20,   f: 0.1, na: 55 },
+  { id: "g_potato",       name: "Potato",                brand: "raw, with skin",   cal: 77,  p: 2,   c: 17,   f: 0.1, na: 6 },
+  { id: "g_bell_pepper",  name: "Bell pepper",           brand: "raw",              cal: 31,  p: 1,   c: 6,    f: 0.3, na: 4 },
+  { id: "g_tomato",       name: "Tomato",                brand: "raw",              cal: 18,  p: 0.9, c: 3.9,  f: 0.2, na: 5 },
+  { id: "g_cucumber",     name: "Cucumber",              brand: "raw",              cal: 16,  p: 0.7, c: 4,    f: 0.1, na: 2 },
+  { id: "g_onion",        name: "Onion",                 brand: "raw",              cal: 40,  p: 1.1, c: 9,    f: 0.1, na: 4 },
+  { id: "g_lettuce_rom",  name: "Lettuce, romaine",      brand: "raw",              cal: 17,  p: 1.2, c: 3.3,  f: 0.3, na: 8 },
+  // Proteins
+  { id: "g_chicken_b",    name: "Chicken breast",        brand: "raw, skinless",    cal: 120, p: 23,  c: 0,    f: 2.6, na: 45 },
+  { id: "g_chicken_t",    name: "Chicken thigh",         brand: "raw, skinless",    cal: 119, p: 19,  c: 0,    f: 4.5, na: 86 },
+  { id: "g_salmon",       name: "Salmon",                brand: "raw, Atlantic",    cal: 208, p: 20,  c: 0,    f: 13,  na: 59 },
+  { id: "g_beef_90",      name: "Ground beef, 90% lean", brand: "raw",              cal: 176, p: 20,  c: 0,    f: 10,  na: 66 },
+  { id: "g_egg",          name: "Egg, whole",            brand: "raw, large",       cal: 143, p: 13,  c: 0.7,  f: 9.5, na: 142 },
+  { id: "g_tuna_water",   name: "Tuna",                  brand: "canned in water",  cal: 116, p: 26,  c: 0,    f: 1,   na: 247 },
+  { id: "g_greek_yog",    name: "Greek yogurt",          brand: "plain, nonfat",    cal: 59,  p: 10,  c: 3.6,  f: 0.4, na: 36 },
+  { id: "g_cottage",      name: "Cottage cheese",        brand: "low-fat 2%",       cal: 81,  p: 11,  c: 3.4,  f: 1.2, na: 308 },
+  { id: "g_tofu",         name: "Tofu",                  brand: "firm",             cal: 144, p: 17,  c: 2.8,  f: 9,   na: 14 },
+  { id: "g_black_beans",  name: "Black beans",           brand: "cooked",           cal: 132, p: 8.9, c: 24,   f: 0.5, na: 1 },
+  { id: "g_lentils",      name: "Lentils",               brand: "cooked",           cal: 116, p: 9,   c: 20,   f: 0.4, na: 2 },
+  { id: "g_chickpeas",    name: "Chickpeas",             brand: "cooked",           cal: 164, p: 8.9, c: 27,   f: 2.6, na: 7 },
+  // Grains
+  { id: "g_rice_brown",   name: "Brown rice",            brand: "cooked",           cal: 112, p: 2.6, c: 24,   f: 0.9, na: 5 },
+  { id: "g_rice_white",   name: "White rice",            brand: "cooked",           cal: 130, p: 2.7, c: 28,   f: 0.3, na: 1 },
+  { id: "g_oats",         name: "Oats",                  brand: "dry, rolled",      cal: 389, p: 17,  c: 66,   f: 7,   na: 2 },
+  { id: "g_quinoa",       name: "Quinoa",                brand: "cooked",           cal: 120, p: 4.4, c: 21,   f: 1.9, na: 7 },
+  { id: "g_bread_ww",     name: "Whole wheat bread",     brand: "",                 cal: 247, p: 13,  c: 41,   f: 3.4, na: 472 },
+  { id: "g_pasta",        name: "Pasta",                 brand: "cooked",           cal: 158, p: 5.8, c: 31,   f: 0.9, na: 1 },
+  // Dairy & milk
+  { id: "g_milk_2pct",    name: "Milk, 2%",              brand: "",                 cal: 50,  p: 3.3, c: 4.7,  f: 2,   na: 44 },
+  { id: "g_milk_whole",   name: "Milk, whole",           brand: "",                 cal: 61,  p: 3.2, c: 4.8,  f: 3.3, na: 43 },
+  { id: "g_almond_milk",  name: "Almond milk",           brand: "unsweetened",      cal: 17,  p: 0.6, c: 0.3,  f: 1.5, na: 63 },
+  { id: "g_cheddar",      name: "Cheddar cheese",        brand: "",                 cal: 402, p: 23,  c: 3.4,  f: 33,  na: 621 },
+  // Nuts & nut butters
+  { id: "g_almonds",      name: "Almonds",               brand: "raw",              cal: 579, p: 21,  c: 22,   f: 50,  na: 1 },
+  { id: "g_walnuts",      name: "Walnuts",               brand: "raw",              cal: 654, p: 15,  c: 14,   f: 65,  na: 2 },
+  { id: "g_peanut_btr",   name: "Peanut butter",         brand: "plain",            cal: 588, p: 25,  c: 20,   f: 50,  na: 17 },
+];
+
+function searchGeneric(query) {
+  const q = (query || "").trim().toLowerCase();
+  if (!q) return [];
+  // Split on spaces so "red grapes" matches "Grapes, red"
+  const terms = q.split(/\s+/).filter(Boolean);
+  const matches = [];
+  for (const food of GENERIC_FOODS) {
+    const hay = (food.name + " " + (food.brand || "")).toLowerCase();
+    if (terms.every(t => hay.includes(t))) {
+      matches.push({
+        name: food.name,
+        brand: food.brand || "",
+        cal: food.cal, p: food.p, c: food.c, f: food.f,
+        na: food.na || 0,
+        servingG: null,
+        servingLabel: "",
+        upc: food.id,
+        unit: "g",
+        missingFields: [],
+      });
+    }
+  }
+  return matches;
+}
+
+// ── Open Food Facts: shared product mapper ───────────────────────────────────
+// Converts an OFF product object (from either /api/v2/product or
+// /cgi/search.pl) into the shape the rest of the app expects.
+function mapOFFProduct(p, upc) {
+  const n = p.nutriments || {};
+  const numeric = v => {
+    const x = parseFloat(v);
+    return isFinite(x) ? x : null;
+  };
+  let kcal = numeric(n["energy-kcal_100g"]);
+  if (kcal === null) {
+    const kj = numeric(n["energy_100g"]);
+    if (kj !== null) kcal = kj / 4.184;
+  }
+  if (kcal === null) kcal = 0;
+  // OFF reports sodium in grams per 100g/ml. Convert to mg.
+  let naMg = numeric(n.sodium_100g);
+  if (naMg !== null) naMg = Math.round(naMg * 1000);
+  if (naMg === null) {
+    const saltG = numeric(n.salt_100g);
+    if (saltG !== null) naMg = Math.round((saltG / 2.5) * 1000);
+  }
+  const servingG = numeric(p.serving_quantity);
+  const servingLabel = (p.serving_size || "").trim();
+  const result = {
+    name:  (p.product_name || p.abbreviated_product_name || "").trim() || "Unknown Product",
+    brand: (p.brands || "").trim(),
+    cal:   Math.round(kcal),
+    p:     Math.round((numeric(n.proteins_100g)      || 0) * 10) / 10,
+    c:     Math.round((numeric(n.carbohydrates_100g) || 0) * 10) / 10,
+    f:     Math.round((numeric(n.fat_100g)           || 0) * 10) / 10,
+    na:    naMg !== null ? naMg : 0,
+    servingG: servingG && servingG > 0 ? servingG : null,
+    servingLabel,
+    upc:   String(upc || p.code || "").replace(/\D/g, ""),
+  };
+  result.missingFields = ["proteins_100g","carbohydrates_100g","fat_100g"]
+    .filter(k => numeric(n[k]) === null);
+  return result;
+}
+
+// ── UPC Lookup ────────────────────────────────────────────────────────────────
+async function lookupUPC(upc) {
+  const clean = String(upc).replace(/\D/g, "");
+  if (!clean) return null;
+  try {
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 8000);
+    const res = await fetch(
+      `https://world.openfoodfacts.org/api/v2/product/${encodeURIComponent(clean)}?fields=product_name,abbreviated_product_name,brands,nutriments,serving_size,serving_quantity`,
+      {signal:controller.signal}
+    );
+    clearTimeout(timeout);
+    if (!res.ok) return null;
+    const data = await res.json();
+    if (data.status !== 1 || !data.product) return null;
+    return mapOFFProduct(data.product, clean);
+  } catch (e) {
+    console.warn("UPC lookup failed:", e.name, e.message);
+    return null;
+  }
+}
+
+// ── Search by name (OFF search) ──────────────────────────────────────────────
+// Uses Open Food Facts' v2 search endpoint — same host as the v2 product
+// endpoint we already use for barcode scans, so CORS is consistent. The
+// legacy /cgi/search.pl endpoint ships without proper CORS headers and
+// fails from the browser.
+//
+// Returns an array of mapped products (same shape as lookupUPC), or null
+// on network/timeout/HTTP error. lastSearchError is also set so the UI can
+// show a useful diagnostic instead of a generic "couldn't reach".
+let lastSearchError = null;
+async function searchOFF(query, opts) {
+  const q = (query || "").trim();
+  if (!q) return [];
+  const pageSize = (opts && opts.pageSize) || 20;
+  lastSearchError = null;
+  try {
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 12000);
+    const url = "https://world.openfoodfacts.org/api/v2/search"
+      + "?search_terms=" + encodeURIComponent(q)
+      + "&page_size=" + pageSize
+      + "&fields=code,product_name,abbreviated_product_name,brands,nutriments,serving_size,serving_quantity";
+    const res = await fetch(url, { signal: controller.signal });
+    clearTimeout(timeout);
+    if (!res.ok) {
+      lastSearchError = "HTTP " + res.status;
+      return null;
+    }
+    const data = await res.json();
+    const products = Array.isArray(data.products) ? data.products : [];
+    return products
+      .filter(p => p && (p.product_name || p.abbreviated_product_name) && p.code)
+      .map(p => mapOFFProduct(p, p.code));
+  } catch (e) {
+    console.warn("OFF search failed:", e.name, e.message);
+    lastSearchError = e.name === "AbortError"
+      ? "timed out (12s)"
+      : (e.name + ": " + (e.message || "network error"));
+    return null;
+  }
+}
+
+// ── USDA FoodData Central search ─────────────────────────────────────────────
+// Government-curated database. Branded foods come from FDA-required nutrition
+// labels (so sodium values are trustworthy). Foundation/SR Legacy entries are
+// lab-measured generic foods. Nutrient values are per 100 g/ml for the
+// nutrients we use.
+const USDA_NUTRIENT_IDS = { cal: 1008, p: 1003, f: 1004, c: 1005, na: 1093 };
+
+function mapUSDAFood(f) {
+  // foodNutrients is an array of {nutrientId, nutrientName, value, unitName}.
+  const find = id => {
+    const n = (f.foodNutrients || []).find(x =>
+      x && (x.nutrientId === id || x.nutrientNumber === String(id)));
+    if (!n) return null;
+    const v = typeof n.value === "number" ? n.value : parseFloat(n.value);
+    return isFinite(v) ? v : null;
+  };
+  let cal = find(USDA_NUTRIENT_IDS.cal);
+  if (cal === null) {
+    // Some foods report only kJ (id 1062) — convert.
+    const kj = find(1062);
+    if (kj !== null) cal = kj / 4.184;
+  }
+  if (cal === null) cal = 0;
+  const p   = find(USDA_NUTRIENT_IDS.p)  || 0;
+  const c   = find(USDA_NUTRIENT_IDS.c)  || 0;
+  const fat = find(USDA_NUTRIENT_IDS.f)  || 0;
+  const na  = find(USDA_NUTRIENT_IDS.na) || 0;
+
+  const unitRaw = (f.servingSizeUnit || "").toUpperCase();
+  const unit = (unitRaw === "ML" || unitRaw === "MLT") ? "ml" : "g";
+  const servingG = (typeof f.servingSize === "number" && f.servingSize > 0
+    && (unitRaw === "G" || unitRaw === "GRM" || unitRaw === "ML" || unitRaw === "MLT"))
+    ? f.servingSize : null;
+
+  return {
+    name:    (f.description || "").trim() || "Unknown food",
+    brand:   (f.brandOwner || f.brandName || "").trim(),
+    cal:     Math.round(cal),
+    p:       Math.round(p   * 10) / 10,
+    c:       Math.round(c   * 10) / 10,
+    f:       Math.round(fat * 10) / 10,
+    na:      Math.round(na),
+    servingG,
+    servingLabel: f.householdServingFullText || "",
+    unit,
+    upc:     f.gtinUpc ? String(f.gtinUpc).replace(/\D/g, "") : ("usda_" + f.fdcId),
+    missingFields: [],
+    source:  "USDA",
+  };
+}
+
+let lastUsdaError = null;
+async function searchUSDA(query, opts) {
+  const q = (query || "").trim();
+  if (!q) return [];
+  if (!USDA_API_KEY) return [];
+  const pageSize = (opts && opts.pageSize) || 15;
+  lastUsdaError = null;
+  try {
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 12000);
+    const url = "https://api.nal.usda.gov/fdc/v1/foods/search"
+      + "?api_key=" + encodeURIComponent(USDA_API_KEY)
+      + "&query="   + encodeURIComponent(q)
+      + "&pageSize=" + pageSize
+      + "&dataType=Foundation,SR%20Legacy,Branded";
+    const res = await fetch(url, { signal: controller.signal });
+    clearTimeout(timeout);
+    if (!res.ok) {
+      lastUsdaError = "HTTP " + res.status;
+      return null;
+    }
+    const data = await res.json();
+    const foods = Array.isArray(data.foods) ? data.foods : [];
+    return foods.filter(f => f && f.description).map(mapUSDAFood);
+  } catch (e) {
+    console.warn("USDA search failed:", e.name, e.message);
+    lastUsdaError = e.name === "AbortError"
+      ? "timed out (12s)"
+      : (e.name + ": " + (e.message || "network error"));
+    return null;
+  }
+}
+
+// Search-results UI. Token is bumped on every new search so a slow earlier
+// query can't overwrite the results of a newer one.
+let searchToken = 0;
+const searchCache = new Map(); // upc → mapped product (avoid re-fetching on pick)
+
+function openSearchFoods(initialQuery) {
+  const q = esc(initialQuery || "");
+  showModal(`
+    <h2>Search Foods</h2>
+    <p>Searches Open Food Facts. Results are products (branded items mostly);
+       generic foods like "raw apple" or "grapes" exist but quality varies.</p>
+    <div class="field">
+      <input type="text" id="search-input" value="${q}"
+        placeholder="e.g. apple, oats, greek yogurt"
+        autocapitalize="none" autocomplete="off" spellcheck="false"
+        oninput="onSearchInput()"
+        onkeydown="if(event.key==='Enter'){event.preventDefault();runFoodSearch();}"/>
+    </div>
+    <div id="search-status" class="setting-sub" style="margin-bottom:10px">Type a name and press Enter.</div>
+    <div id="search-results"></div>
+    <div class="modal-actions" style="margin-top:14px">
+      <button class="btn btn-ghost" onclick="closeModal()">Cancel</button>
+      <button class="btn btn-primary" onclick="runFoodSearch()">Search</button>
+    </div>`);
+  if (initialQuery) runFoodSearch();
+}
+
+// Debounce typing so we don't fire a query on every keystroke. Enter still
+// triggers an immediate search via the onkeydown handler above.
+let searchDebounce = null;
+function onSearchInput() {
+  clearTimeout(searchDebounce);
+  searchDebounce = setTimeout(runFoodSearch, 500);
+}
+
+async function runFoodSearch() {
+  const inp = document.getElementById("search-input");
+  const status = document.getElementById("search-status");
+  const results = document.getElementById("search-results");
+  if (!inp || !status || !results) return;
+  const q = inp.value.trim();
+  if (!q) {
+    status.textContent = "Type a name and press Enter.";
+    results.innerHTML = "";
+    return;
+  }
+  const my = ++searchToken;
+  status.textContent = "Searching…";
+  results.innerHTML = "";
+
+  // Local generic matches come back instantly and never fail.
+  const generic = searchGeneric(q);
+
+  // Query USDA and OFF in parallel. Tolerate either failing — built-in
+  // results always stand alone, and one source failing doesn't hide the
+  // other.
+  const [usda, off] = await Promise.all([searchUSDA(q), searchOFF(q)]);
+  if (my !== searchToken) return;
+
+  const usdaItems = Array.isArray(usda) ? usda : [];
+  const offItems  = Array.isArray(off)  ? off  : [];
+  // Order matters: built-in first (most reliable, instant), USDA second
+  // (gov-curated), OFF last (community-edited, lower trust).
+  const items = [...generic, ...usdaItems, ...offItems];
+
+  if (!items.length) {
+    const dbStatus = [];
+    if (usda === null) dbStatus.push("USDA" + (lastUsdaError   ? " (" + lastUsdaError   + ")" : ""));
+    if (off  === null) dbStatus.push("OFF"  + (lastSearchError ? " (" + lastSearchError + ")" : ""));
+    status.textContent = `No results for "${esc(q)}"`
+      + (dbStatus.length ? `. Unreachable: ${dbStatus.join(", ")}` : "")
+      + ". Try a different word, or use Enter Manually.";
+    return;
+  }
+
+  searchCache.clear();
+  items.forEach(it => { if (it.upc) searchCache.set(it.upc, it); });
+
+  const parts = [];
+  if (generic.length)   parts.push(`${generic.length} built-in`);
+  if (usdaItems.length) parts.push(`${usdaItems.length} USDA`);
+  if (offItems.length)  parts.push(`${offItems.length} OFF`);
+  const failures = [];
+  if (usda === null) failures.push("USDA unreachable");
+  if (off  === null) failures.push("OFF unreachable");
+  status.textContent = parts.join(" + ")
+    + (failures.length ? ` · ${failures.join(", ")}` : "")
+    + " — tap one to add.";
+
+  results.innerHTML = items.map(it => {
+    const upcLit = jsLit(it.upc);
+    const macros = `${it.cal} kcal · ${it.p}g pro · ${it.c}g carb · ${it.f}g fat · ${it.na || 0}mg Na`;
+    let tag = "";
+    if (String(it.upc).startsWith("g_")) {
+      tag = `<span class="search-result-tag tag-builtin">BUILT-IN</span>`;
+    } else if (it.source === "USDA") {
+      tag = `<span class="search-result-tag tag-usda">USDA</span>`;
+    } else {
+      tag = `<span class="search-result-tag tag-off">OFF</span>`;
+    }
+    return `<button class="search-result" onclick="pickSearchResult(${upcLit})">
+      <div class="search-result-name">${esc(it.name)} ${tag}</div>
+      ${it.brand ? `<div class="search-result-brand">${esc(it.brand)}</div>` : ""}
+      <div class="search-result-macros">${macros} <span style="opacity:.6">per 100g</span></div>
+    </button>`;
+  }).join("");
+}
+
+function pickSearchResult(upc) {
+  const cached = searchCache.get(String(upc));
+  if (cached) {
+    closeModal();
+    openConfirmFood(cached);
+    return;
+  }
+  // Cache miss (shouldn't happen but be defensive) — fetch via UPC and open.
+  closeModal();
+  showToast("Looking up…");
+  lookupUPC(upc).then(r => {
+    if (r) openConfirmFood(r);
+    else   showToast("Couldn't load that food", true);
+  });
+}
+
+// ── Scanner ───────────────────────────────────────────────────────────────────
+// Prefer the native BarcodeDetector API where it exists (Chrome on Android/Mac,
+// Safari 17+ on iOS, Edge on Mac). Fall back to ZXing-js, lazy-loaded from a
+// CDN, for browsers without it (Firefox, Chrome on Windows/Linux, older iOS).
+let scannerStream = null, scannerDetector = null, scannerAnimFrame = null;
+let scannerZXingReader = null;
+let zxingLoadPromise = null;
+
+function loadScript(src) {
+  return new Promise((resolve, reject) => {
+    const existing = document.querySelector(`script[data-loaded-src="${src}"]`);
+    if (existing) { resolve(); return; }
+    const s = document.createElement("script");
+    s.src = src;
+    s.async = true;
+    s.dataset.loadedSrc = src;
+    s.onload  = () => resolve();
+    s.onerror = () => reject(new Error("Failed to load " + src));
+    document.head.appendChild(s);
+  });
+}
+
+function loadZXing() {
+  if (window.ZXing) return Promise.resolve();
+  if (!zxingLoadPromise) {
+    // Pin a known-good major version so future breaking changes don't bite.
+    zxingLoadPromise = loadScript("https://cdn.jsdelivr.net/npm/@zxing/library@0.21.3/umd/index.min.js")
+      .catch(err => { zxingLoadPromise = null; throw err; });
+  }
+  return zxingLoadPromise;
+}
+
+async function startScanner() {
+  const overlay = document.getElementById("scanner-overlay");
+  overlay.style.display = "flex";
+  const status = document.getElementById("scanner-status");
+
+  if ("BarcodeDetector" in window) {
+    return startNativeScanner(status);
+  }
+  return startFallbackScanner(status);
+}
+
+async function startNativeScanner(status) {
+  try {
+    scannerStream = await navigator.mediaDevices.getUserMedia({
+      video:{facingMode:"environment", width:{ideal:1280}, height:{ideal:720}}
+    });
+    const video = document.getElementById("scanner-video");
+    video.srcObject = scannerStream;
+    await video.play();
+    scannerDetector = new BarcodeDetector({formats:["upc_a","upc_e","ean_13","ean_8","code_128","code_39"]});
+    status.textContent = "Point at a barcode";
+    scanLoop(video, status);
+  } catch (err) {
+    closeScanner();
+    if (err.name === "NotAllowedError") openAddManual("Camera access denied. Enter UPC manually.");
+    else                                 openAddManual("Camera unavailable. Enter UPC manually.");
+  }
+}
+
+async function startFallbackScanner(status) {
+  status.textContent = "Loading scanner…";
+  try {
+    await loadZXing();
+  } catch (e) {
+    closeScanner();
+    openAddManual("Couldn't load the scanner library (offline?). Enter UPC manually.");
+    return;
+  }
+  if (!window.ZXing) {
+    closeScanner();
+    openAddManual("Scanner library failed to initialise. Enter UPC manually.");
+    return;
+  }
+  try {
+    const hints = new Map();
+    hints.set(window.ZXing.DecodeHintType.POSSIBLE_FORMATS, [
+      window.ZXing.BarcodeFormat.UPC_A,
+      window.ZXing.BarcodeFormat.UPC_E,
+      window.ZXing.BarcodeFormat.EAN_13,
+      window.ZXing.BarcodeFormat.EAN_8,
+      window.ZXing.BarcodeFormat.CODE_128,
+      window.ZXing.BarcodeFormat.CODE_39,
+    ]);
+    scannerZXingReader = new window.ZXing.BrowserMultiFormatReader(hints);
+    status.textContent = "Point at a barcode";
+    await scannerZXingReader.decodeFromConstraints(
+      {video:{facingMode:"environment", width:{ideal:1280}, height:{ideal:720}}},
+      document.getElementById("scanner-video"),
+      (result /*, err */) => {
+        if (result && scannerZXingReader) {
+          const code = result.getText();
+          status.textContent = "Found: " + code + " — looking up…";
+          closeScanner();
+          handleScannedCode(code);
+        }
+        // ZXing emits a NotFoundException on every frame without a match —
+        // ignore those, they're not real errors.
+      }
+    );
+  } catch (err) {
+    console.warn("ZXing scanner failed:", err);
+    closeScanner();
+    if (err && err.name === "NotAllowedError") openAddManual("Camera access denied. Enter UPC manually.");
+    else                                       openAddManual("Couldn't start the camera. Enter UPC manually.");
+  }
+}
+
+function scanLoop(video, status) {
+  scannerAnimFrame = requestAnimationFrame(async () => {
+    if (!scannerStream) return;
+    try {
+      const barcodes = await scannerDetector.detect(video);
+      if (barcodes.length > 0) {
+        const code = barcodes[0].rawValue;
+        status.textContent = "Found: " + code + " — looking up…";
+        closeScanner();
+        await handleScannedCode(code);
+        return;
+      }
+    } catch (e) {}
+    scanLoop(video, status);
+  });
+}
+
+function closeScanner() {
+  if (scannerAnimFrame) { cancelAnimationFrame(scannerAnimFrame); scannerAnimFrame = null; }
+  if (scannerStream)    { scannerStream.getTracks().forEach(t => t.stop()); scannerStream = null; }
+  if (scannerZXingReader) {
+    try { scannerZXingReader.reset(); } catch (e) {}
+    scannerZXingReader = null;
+  }
+  const overlay = document.getElementById("scanner-overlay");
+  if (overlay) overlay.style.display = "none";
+  const video = document.getElementById("scanner-video");
+  if (video) video.srcObject = null;
+}
+
+async function handleScannedCode(upc) {
+  showToast("Looking up " + upc + "…");
+  let result = null;
+  try { result = await lookupUPC(upc); } catch (e) { console.warn("lookup error:", e); }
+  if (!result) {
+    openAddManual("Product not found for UPC " + upc + ". Fill in the details from the package.", upc);
+    return;
+  }
+  openConfirmFood(result);
+}
+
+// ── Confirm scanned food ──────────────────────────────────────────────────────
+// Stash the looked-up food in a module-level slot so the form submit handler
+// can read it without round-tripping the object through an inline onclick.
+let pendingConfirmFood = null;
+
+function openConfirmFood(food) {
+  pendingConfirmFood = food;
+  const warn = food.missingFields && food.missingFields.length
+    ? `<p style="color:var(--amber);font-size:21px;margin-bottom:14px">
+        Heads up: Open Food Facts is missing ${esc(food.missingFields.join(", "))} for this product.
+        Verify the numbers before saving.
+      </p>` : "";
+  showModal(`
+    <h2>Confirm Food</h2>
+    ${warn}
+    <div class="lookup-result">
+      <div class="lookup-name">${esc(food.name)}</div>
+      ${food.brand ? `<div class="lookup-brand">${esc(food.brand)}</div>` : ""}
+      <div class="lookup-macros">
+        <div class="lookup-macro"><span>CAL </span>${esc(food.cal)}</div>
+        <div class="lookup-macro"><span>PRO </span>${esc(food.p)}g</div>
+        <div class="lookup-macro"><span>CARB </span>${esc(food.c)}g</div>
+        <div class="lookup-macro"><span>FAT </span>${esc(food.f)}g</div>
+        <div class="lookup-macro" style="color:var(--text-mute);font-size:17px">per 100g</div>
+      </div>
+    </div>
+    <div class="field">
+      <label>Name (edit if needed)</label>
+      <input type="text" id="confirm-name" value="${esc(food.name)}"/>
+    </div>
+    <div class="field">
+      <label>Brand</label>
+      <input type="text" id="confirm-brand" value="${esc(food.brand || "")}" placeholder="e.g. Fage, Chobani"/>
+    </div>
+    <div class="field">
+      <label>Prep note (optional)</label>
+      <input type="text" id="confirm-prep" placeholder="e.g. No cook, Air fryer 10 min"/>
+    </div>
+    <div class="field-row">
+      <div class="field">
+        <label>Unit</label>
+        <select id="confirm-unit">
+          <option value="g"  ${food.unit !== "ml" ? "selected" : ""}>g (grams)</option>
+          <option value="ml" ${food.unit === "ml" ? "selected" : ""}>ml (millilitres)</option>
+        </select>
+      </div>
+      <div class="field">
+        <label>Sodium (mg/100${esc(food.unit === "ml" ? "ml" : "g")})</label>
+        <input type="number" id="confirm-na" value="${esc(food.na || 0)}"
+          step="1" min="0" inputmode="numeric"/>
+      </div>
+    </div>
+    <div class="field">
+      <label>Serving size (${esc(food.unit === "ml" ? "ml" : "g")}) ${food.servingLabel ? `<span style="color:var(--text-mute);text-transform:none;letter-spacing:0">— OFF says "${esc(food.servingLabel)}"</span>` : ""}</label>
+      <input type="number" id="confirm-serving" value="${food.servingG ? esc(food.servingG) : ""}"
+        step="0.5" min="0" inputmode="decimal"
+        placeholder="optional — e.g. 30 for one cookie"/>
+    </div>
+    <div class="modal-actions">
+      <button class="btn btn-ghost" onclick="cancelConfirmFood()">Cancel</button>
+      <button class="btn btn-primary" onclick="saveConfirmedFood()">Add to My Foods</button>
+    </div>`);
+}
+
+function cancelConfirmFood() { pendingConfirmFood = null; closeModal(); }
+
+function saveConfirmedFood() {
+  const food = pendingConfirmFood;
+  if (!food) { closeModal(); return; }
+  const name    = document.getElementById("confirm-name").value.trim();
+  const brand   = document.getElementById("confirm-brand").value.trim();
+  const prep    = document.getElementById("confirm-prep").value.trim();
+  const unit    = document.getElementById("confirm-unit").value;
+  const naInput = parseFloat(document.getElementById("confirm-na").value);
+  const sInput  = parseFloat(document.getElementById("confirm-serving").value);
+  if (!name) { showToast("Please enter a name", true); return; }
+  const custom = {
+    id: "c_" + Date.now(),
+    name, brand, prep: prep || "No cook", unit,
+    cal: food.cal, p: food.p, c: food.c, f: food.f,
+    na: isFinite(naInput) && naInput >= 0 ? Math.round(naInput) : (food.na || 0),
+    servingG: isFinite(sInput) && sInput > 0 ? sInput : (food.servingG || null),
+    servingLabel: food.servingLabel || "",
+    upc: food.upc || "", custom: true
+  };
+  if (!STATE.customFoods) STATE.customFoods = [];
+  STATE.customFoods.push(custom);
+  STATE.portions[String(custom.id)] = 100;
+  pendingConfirmFood = null;
+  saveState(true); closeModal(); render();
+  showToast(name + " added");
+}
+
+// ── Manual entry ──────────────────────────────────────────────────────────────
+function openAddManual(note, prefillUpc) {
+  showModal(`
+    <h2>Add Food Manually</h2>
+    ${note ? `<p style="color:var(--amber);font-size:21px;margin-bottom:14px">${esc(note)}</p>` : ""}
+    <div class="field">
+      <label>UPC / Barcode (optional)</label>
+      <input type="number" id="manual-upc" value="${esc(prefillUpc || "")}" placeholder="e.g. 049000028911"
+        inputmode="numeric" style="font-size:23px"/>
+    </div>
+    <button class="btn btn-ghost" style="width:100%;margin-bottom:16px;font-size:21px"
+      onclick="lookupManualUPC()">Look up this UPC</button>
+    <div class="field">
+      <label>Food name *</label>
+      <input type="text" id="manual-name" placeholder="e.g. Greek Yogurt"/>
+    </div>
+    <div class="field">
+      <label>Brand</label>
+      <input type="text" id="manual-brand" placeholder="e.g. Fage Total 0%"/>
+    </div>
+    <div class="field">
+      <label>Prep note</label>
+      <input type="text" id="manual-prep" placeholder="e.g. No cook"/>
+    </div>
+    <div class="field">
+      <label>Unit</label>
+      <select id="manual-unit">
+        <option value="g">g (grams)</option>
+        <option value="ml">ml (millilitres)</option>
+      </select>
+    </div>
+    <p style="font-family:'DM Mono',monospace;font-size:17px;color:var(--text-mute);margin-bottom:10px">
+      NUTRITION PER 100g / 100ml
+    </p>
+    <div class="field-row">
+      <div class="field"><label>Calories</label><input type="number" id="manual-cal" placeholder="0" inputmode="decimal"/></div>
+      <div class="field"><label>Protein (g)</label><input type="number" id="manual-p" placeholder="0" inputmode="decimal"/></div>
+    </div>
+    <div class="field-row">
+      <div class="field"><label>Carbs (g)</label><input type="number" id="manual-c" placeholder="0" inputmode="decimal"/></div>
+      <div class="field"><label>Fat (g)</label><input type="number" id="manual-f" placeholder="0" inputmode="decimal"/></div>
+    </div>
+    <div class="field-row">
+      <div class="field"><label>Sodium (mg)</label><input type="number" id="manual-na" placeholder="0" inputmode="numeric"/></div>
+      <div class="field"><label>Serving size (g)</label><input type="number" id="manual-serving" placeholder="optional" inputmode="decimal"/></div>
+    </div>
+    <div class="modal-actions">
+      <button class="btn btn-ghost" onclick="closeModal()">Cancel</button>
+      <button class="btn btn-primary" onclick="saveManualFood()">Add to My Foods</button>
+    </div>`);
+}
+
+let lookupBusy = false;
+async function lookupManualUPC() {
+  if (lookupBusy) return;
+  lookupBusy = true;
+  try {
+    const upc = document.getElementById("manual-upc").value.trim();
+    if (!upc) { showToast("Enter a UPC first", true); return; }
+    showToast("Looking up…");
+    const result = await lookupUPC(upc);
+    if (!result) { showToast("Product not found", true); return; }
+    document.getElementById("manual-name").value  = result.name;
+    document.getElementById("manual-brand").value = result.brand || "";
+    document.getElementById("manual-cal").value   = result.cal;
+    document.getElementById("manual-p").value     = result.p;
+    document.getElementById("manual-c").value     = result.c;
+    document.getElementById("manual-f").value     = result.f;
+    if (result.missingFields && result.missingFields.length) {
+      showToast("Found, but verify macros", true);
+    } else {
+      showToast("Found: " + result.name);
+    }
+  } finally {
+    lookupBusy = false;
+  }
+}
+
+function saveManualFood() {
+  const name  = document.getElementById("manual-name").value.trim();
+  const brand = document.getElementById("manual-brand").value.trim();
+  const prep  = document.getElementById("manual-prep").value.trim();
+  const unit  = document.getElementById("manual-unit").value;
+  const cal   = parseFloat(document.getElementById("manual-cal").value) || 0;
+  const p     = parseFloat(document.getElementById("manual-p").value) || 0;
+  const c     = parseFloat(document.getElementById("manual-c").value) || 0;
+  const f     = parseFloat(document.getElementById("manual-f").value) || 0;
+  const naIn  = parseFloat(document.getElementById("manual-na").value);
+  const sIn   = parseFloat(document.getElementById("manual-serving").value);
+  const upc   = document.getElementById("manual-upc").value.trim();
+  if (!name)    { showToast("Please enter a name", true); return; }
+  if (cal <= 0) { showToast("Please enter calories", true); return; }
+  const custom = {
+    id:"c_"+Date.now(), name, brand, prep:prep||"No cook", unit, cal, p, c, f,
+    na: isFinite(naIn) && naIn >= 0 ? Math.round(naIn) : 0,
+    servingG: isFinite(sIn) && sIn > 0 ? sIn : null,
+    upc, custom:true
+  };
+  if (!STATE.customFoods) STATE.customFoods = [];
+  STATE.customFoods.push(custom);
+  STATE.portions[String(custom.id)] = 100;
+  saveState(true); closeModal(); render();
+  showToast(name + " added");
+}
+
+// ── Actions: foods tab ────────────────────────────────────────────────────────
+function patchMacroBars(pairs) {
+  document.querySelectorAll(".macro-row").forEach((row, i) => {
+    if (!pairs[i]) return;
+    const [label, value, target, color] = pairs[i];
+    const v = Math.round(value), pct = Math.min(100, Math.round((v/target)*100)), over = v > target*1.05;
+    const fill  = row.querySelector(".bar-fill");
+    const valEl = row.querySelector(".macro-val");
+    const unit = label === "KCAL" ? "" : "g";
+    if (fill)  { fill.style.width = pct + "%"; fill.style.background = over ? "var(--danger)" : color; }
+    if (valEl) { valEl.textContent = v + " / " + target + unit; valEl.className = "macro-val" + (over ? " over" : ""); }
+  });
+}
+
+function confirmDeleteFood(id) {
+  const food = (STATE.customFoods || []).find(f => f.id === id);
+  if (!food) return;
+  const idLit = jsLit(id);
+  showModal(`
+    <h2>Delete "${esc(food.name)}"?</h2>
+    <p>This will remove it from your food list permanently.</p>
+    <div class="modal-actions">
+      <button class="btn btn-ghost" onclick="closeModal()">Cancel</button>
+      <button class="btn btn-danger" onclick="deleteCustomFood(${idLit})">Delete</button>
+    </div>`);
+}
+
+// Edit an existing custom food. Lets you correct values the database got wrong
+// (most commonly sodium on packaged foods scanned from Open Food Facts).
+function openEditFood(id) {
+  const food = (STATE.customFoods || []).find(f => String(f.id) === String(id));
+  if (!food) { showToast("Food not found", true); return; }
+  const idLit = jsLit(id);
+  const unit = food.unit || "g";
+  showModal(`
+    <h2>Edit Food</h2>
+    <p style="color:var(--text-mute);font-size:17px;margin-bottom:14px">
+      Values are per 100${esc(unit)}.
+    </p>
+    <div class="field">
+      <label>Name</label>
+      <input type="text" id="edit-name" value="${esc(food.name)}"/>
+    </div>
+    <div class="field">
+      <label>Brand</label>
+      <input type="text" id="edit-brand" value="${esc(food.brand || "")}"/>
+    </div>
+    <div class="field">
+      <label>Prep note</label>
+      <input type="text" id="edit-prep" value="${esc(food.prep || "")}"/>
+    </div>
+    <div class="field">
+      <label>Unit</label>
+      <select id="edit-unit">
+        <option value="g"  ${unit !== "ml" ? "selected" : ""}>g (grams)</option>
+        <option value="ml" ${unit === "ml" ? "selected" : ""}>ml (millilitres)</option>
+      </select>
+    </div>
+    <div class="field-row">
+      <div class="field"><label>Calories</label><input type="number" id="edit-cal" value="${esc(food.cal)}" inputmode="decimal"/></div>
+      <div class="field"><label>Protein (g)</label><input type="number" id="edit-p" value="${esc(food.p)}" inputmode="decimal"/></div>
+    </div>
+    <div class="field-row">
+      <div class="field"><label>Carbs (g)</label><input type="number" id="edit-c" value="${esc(food.c)}" inputmode="decimal"/></div>
+      <div class="field"><label>Fat (g)</label><input type="number" id="edit-f" value="${esc(food.f)}" inputmode="decimal"/></div>
+    </div>
+    <div class="field-row">
+      <div class="field"><label>Sodium (mg)</label><input type="number" id="edit-na" value="${esc(food.na || 0)}" inputmode="numeric"/></div>
+      <div class="field"><label>Serving (${esc(unit === "ml" ? "ml" : "g")})</label><input type="number" id="edit-serving" value="${food.servingG ? esc(food.servingG) : ""}" placeholder="optional" inputmode="decimal"/></div>
+    </div>
+    <div class="modal-actions">
+      <button class="btn btn-ghost" onclick="closeModal()">Cancel</button>
+      <button class="btn btn-primary" onclick="saveEditedFood(${idLit})">Save</button>
+    </div>`);
+}
+
+function saveEditedFood(id) {
+  const food = (STATE.customFoods || []).find(f => String(f.id) === String(id));
+  if (!food) { showToast("Food not found", true); return; }
+  const name = document.getElementById("edit-name").value.trim();
+  const cal  = parseFloat(document.getElementById("edit-cal").value) || 0;
+  if (!name)    { showToast("Please enter a name", true); return; }
+  if (cal <= 0) { showToast("Please enter calories", true); return; }
+  food.name  = name;
+  food.brand = document.getElementById("edit-brand").value.trim();
+  food.prep  = document.getElementById("edit-prep").value.trim() || "No cook";
+  food.unit  = document.getElementById("edit-unit").value;
+  food.cal   = cal;
+  food.p     = parseFloat(document.getElementById("edit-p").value) || 0;
+  food.c     = parseFloat(document.getElementById("edit-c").value) || 0;
+  food.f     = parseFloat(document.getElementById("edit-f").value) || 0;
+  const naIn = parseFloat(document.getElementById("edit-na").value);
+  const sIn  = parseFloat(document.getElementById("edit-serving").value);
+  food.na    = isFinite(naIn) && naIn >= 0 ? Math.round(naIn) : 0;
+  food.servingG = isFinite(sIn) && sIn > 0 ? sIn : null;
+  saveState(true); closeModal(); render();
+  showToast("Saved");
+}
+
+function deleteCustomFood(id) {
+  STATE.customFoods = (STATE.customFoods || []).filter(f => f.id !== id);
+  delete STATE.portions[String(id)];
+  saveState(true); closeModal(); render();
+  showToast("Food removed");
+}
+
+// ── Actions: today's intake ──────────────────────────────────────────────────
+function ensureTodayLog() {
+  const today = todayKey();
+  if (!STATE.log[today] || typeof STATE.log[today] !== "object") STATE.log[today] = {};
+  return STATE.log[today];
+}
+
+// Opens a modal asking how many grams (or servings) of <food> were eaten
+// today. Used for both first-time logging and editing an existing entry.
+function addToToday(id) {
+  const food = (STATE.customFoods || []).find(f => String(f.id) === String(id));
+  if (!food) { showToast("Food not found", true); return; }
+  const today = todayKey();
+  const existing = (STATE.log[today] && STATE.log[today].intake && STATE.log[today].intake[String(id)]);
+  const hasExisting = existing !== undefined && existing !== null;
+  const idLit = jsLit(id);
+  const unit = food.unit || "g";
+  const servingG = (typeof food.servingG === "number" && food.servingG > 0) ? food.servingG : 0;
+  const initG = hasExisting ? existing : "";
+  const initS = (hasExisting && servingG > 0) ? Math.round((existing / servingG) * 100) / 100 : "";
+  const naLine = (food.na != null) ? ` &middot; ${food.na}mg Na` : "";
+
+  // Two-input mode if we know grams-per-serving. Live sync via the food's
+  // servingG, stashed on the modal root via a data attribute so the inline
+  // handlers can read it back.
+  const inputBlock = servingG > 0
+    ? `<div class="field-row">
+         <div class="field">
+           <label>Servings</label>
+           <input type="number" id="intake-servings" value="${esc(initS)}"
+             step="0.25" min="0" placeholder="0" inputmode="decimal" autofocus
+             oninput="syncIntakeFromServings()"/>
+         </div>
+         <div class="field">
+           <label>${esc(unit === "ml" ? "Millilitres" : "Grams")}</label>
+           <input type="number" id="intake-grams" value="${esc(initG)}"
+             step="1" min="0" placeholder="0" inputmode="numeric"
+             oninput="syncIntakeFromGrams()"/>
+         </div>
+       </div>
+       <div class="field-hint">1 serving = ${esc(servingG)}${esc(unit)}${food.servingLabel ? ` &middot; ${esc(food.servingLabel)}` : ""}</div>`
+    : `<div class="field">
+         <label>How many ${esc(unit)} did you eat?</label>
+         <input type="number" id="intake-grams" value="${esc(initG)}"
+           placeholder="0" inputmode="numeric" min="0" max="3000" step="1" autofocus/>
+       </div>`;
+
+  showModal(`
+    <div data-serving-g="${esc(servingG)}" id="intake-modal-data"></div>
+    <h2>${esc(food.name)}</h2>
+    ${food.brand ? `<p style="color:var(--accent2);font-style:italic;margin-bottom:14px">${esc(food.brand)}</p>` : ""}
+    <p>${food.cal} kcal &middot; ${food.p}g pro &middot; ${food.c}g carb &middot; ${food.f}g fat${naLine} <em>per 100${esc(unit)}</em></p>
+    ${inputBlock}
+    <div class="modal-actions">
+      <button class="btn btn-ghost" onclick="closeModal()">Cancel</button>
+      <button class="btn btn-primary" onclick="saveTodayIntake(${idLit})">${hasExisting ? "Update" : "Add"}</button>
+    </div>`);
+}
+
+function getModalServingG() {
+  const el = document.getElementById("intake-modal-data");
+  if (!el) return 0;
+  const v = parseFloat(el.dataset.servingG);
+  return isFinite(v) && v > 0 ? v : 0;
+}
+function syncIntakeFromServings() {
+  const servingG = getModalServingG();
+  if (!servingG) return;
+  const sEl = document.getElementById("intake-servings");
+  const gEl = document.getElementById("intake-grams");
+  if (!sEl || !gEl) return;
+  if (sEl.value === "") { gEl.value = ""; return; }
+  const s = parseFloat(sEl.value);
+  if (isFinite(s)) gEl.value = Math.round(s * servingG);
+}
+function syncIntakeFromGrams() {
+  const servingG = getModalServingG();
+  if (!servingG) return;
+  const sEl = document.getElementById("intake-servings");
+  const gEl = document.getElementById("intake-grams");
+  if (!sEl || !gEl) return;
+  if (gEl.value === "") { sEl.value = ""; return; }
+  const g = parseFloat(gEl.value);
+  if (isFinite(g)) sEl.value = (Math.round((g / servingG) * 100) / 100).toString();
+}
+
+function saveTodayIntake(id) {
+  const input = document.getElementById("intake-grams");
+  if (!input) return;
+  const grams = parseInt(input.value);
+  if (!isFinite(grams) || grams < 0) { showToast("Enter a number", true); return; }
+  const day = ensureTodayLog();
+  if (!day.intake) day.intake = {};
+  if (grams === 0) {
+    delete day.intake[String(id)];
+  } else {
+    day.intake[String(id)] = grams;
+  }
+  if (Object.keys(day.intake).length === 0) delete day.intake;
+  saveState(true);
+  closeModal();
+  // Jump to the Today tab so the user sees the result of their action.
+  switchTab("today");
+  showToast(grams === 0 ? "Removed" : "Logged");
+}
+
+function removeTodayIntake(id) {
+  const day = STATE.log[todayKey()];
+  if (!day || !day.intake) return;
+  delete day.intake[String(id)];
+  if (Object.keys(day.intake).length === 0) delete day.intake;
+  saveState(true); render(); showToast("Removed from today");
+}
+
+// ── Actions: profile (Settings tab) ──────────────────────────────────────────
+function updateProfile(key, value) {
+  const numericKeys = ["weightLbs","heightIn","age","proteinPerLb","sodiumMg"];
+  if (numericKeys.includes(key)) {
+    const n = parseFloat(value);
+    STATE.profile[key] = isFinite(n) ? n : STATE.profile[key];
+  } else {
+    STATE.profile[key] = value;
+  }
+  recomputeTargets();
+  saveState();
+}
+
+function updateProfileFatPct(pct) {
+  const n = parseFloat(pct);
+  if (isFinite(n)) STATE.profile.fatPct = Math.max(0.05, Math.min(0.6, n / 100));
+  recomputeTargets();
+  saveState();
+}
+
+function confirmReset() {
+  showModal(`
+    <h2>Reset all data?</h2>
+    <p>This will clear your check-in history, weight log, custom foods, dismissed foods, profile, and portion sizes. Export a backup first if you want to keep your data.</p>
+    <div class="modal-actions">
+      <button class="btn btn-ghost" onclick="closeModal()">Cancel</button>
+      <button class="btn btn-danger" onclick="hardReset()">Reset all</button>
+    </div>`);
+}
+
+function hardReset() {
+  // Clear both current and legacy storage keys so a stale legacy entry
+  // doesn't get re-migrated on next load.
+  LEGACY_KEYS.forEach(k => { try { localStorage.removeItem(k); } catch (e) {} });
+  STATE = freshState();
+  recomputeTargets();
+  saveState(true); render(); showToast("All data reset");
+}
+
+// ── Global error guard ───────────────────────────────────────────────────────
+window.addEventListener("error", function(e) {
+  if (!e.message || e.message === "Script error.") return;
+  // Log everything we have — line/column/stack — so debugging on a deployed
+  // build isn't a guessing game.
+  console.error("App error:", e.message, "at", e.filename + ":" + e.lineno + ":" + e.colno, e.error && e.error.stack);
+  showToast("Error: " + e.message.slice(0, 60), true);
+});
+// Log but don't swallow rejections — let them surface in the console.
+window.addEventListener("unhandledrejection", function(e) {
+  console.warn("Unhandled promise rejection:", e.reason);
+});
+
+// ── Actions: cloud sync (Settings tab) ───────────────────────────────────────
+function generateSyncToken() {
+  if (!window.crypto || !window.crypto.getRandomValues) {
+    showToast("Crypto unavailable", true);
+    return;
+  }
+  const bytes = new Uint8Array(16);
+  window.crypto.getRandomValues(bytes);
+  SYNC.token = Array.from(bytes).map(b => b.toString(16).padStart(2, "0")).join("");
+  SYNC.lastError = null;
+  saveSync();
+  showToast("Token generated");
+  // Push our current state to the cloud so this new token has data.
+  cloudPush(STATE);
+  render();
+}
+
+function setSyncToken(raw) {
+  const t = (raw || "").trim();
+  if (!t) {
+    SYNC.token = "";
+    SYNC.lastError = null;
+    saveSync(); render();
+    return;
+  }
+  if (!/^[A-Za-z0-9_-]{16,64}$/.test(t)) {
+    showToast("Invalid token format", true);
+    return;
+  }
+  SYNC.token = t;
+  SYNC.lastError = null;
+  saveSync();
+  // Try pulling whatever this token has in the cloud.
+  initialCloudPull();
+  render();
+  showToast("Token saved — syncing");
+}
+
+function copySyncToken() {
+  if (!SYNC.token) return;
+  const fallback = () => {
+    const ta = document.createElement("textarea");
+    ta.value = SYNC.token;
+    document.body.appendChild(ta);
+    ta.select();
+    try { document.execCommand("copy"); showToast("Token copied"); }
+    catch (e) { showToast("Copy failed", true); }
+    ta.remove();
+  };
+  if (navigator.clipboard && navigator.clipboard.writeText) {
+    navigator.clipboard.writeText(SYNC.token)
+      .then(() => showToast("Token copied"))
+      .catch(() => fallback());
+  } else {
+    fallback();
+  }
+}
+
+function clearSyncToken() {
+  showModal(`
+    <h2>Disable cloud sync?</h2>
+    <p>This removes the token from this device only — your data stays in the cloud and on this device. You can re-enable later by pasting the same token.</p>
+    <div class="modal-actions">
+      <button class="btn btn-ghost" onclick="closeModal()">Cancel</button>
+      <button class="btn btn-danger" onclick="confirmClearSync()">Disable</button>
+    </div>`);
+}
+function confirmClearSync() {
+  SYNC.token = "";
+  SYNC.lastError = null;
+  saveSync(); closeModal(); render();
+  showToast("Sync disabled");
+}
+
+function manualSync() {
+  if (!SYNC.token) { showToast("Set a token first", true); return; }
+  showToast("Syncing…");
+  (async () => {
+    // Push first so any unsaved local edits land before we compare.
+    await cloudPush(STATE);
+    const cloudState = await cloudPull();
+    if (cloudState) {
+      const localT = STATE.savedAt ? Date.parse(STATE.savedAt) : 0;
+      const cloudT = cloudState.savedAt ? Date.parse(cloudState.savedAt) : 0;
+      if (cloudT > localT + 1000) {
+        STATE = migrate(cloudState);
+        recomputeTargets();
+        try { localStorage.setItem(STORAGE_KEY, JSON.stringify(STATE)); } catch (e) {}
+        render();
+        showToast("Pulled newer cloud copy");
+        return;
+      }
+    }
+    render();
+    if (!SYNC.lastError) showToast("Synced");
+    else                 showToast("Sync error — see Settings", true);
+  })();
+}
+
+// ── Init ──────────────────────────────────────────────────────────────────────
+render();
+// Fire the initial cloud pull after the first render so the user sees the
+// local state instantly; cloud-newer data swaps in a moment later.
+initialCloudPull();
+// Resilience: ask the browser not to evict us, try IDB recovery if local is
+// empty, and write today's snapshot + IDB mirror immediately so we have a
+// fresh backup even if the user never edits anything this session.
+requestPersistentStorage();
+idbRecoverIfNeeded();
+writeDailySnapshot();
+idbWrite(STATE);
+// Last-ditch flush on tab close so any pending debounced save reaches storage.
+window.addEventListener("pagehide", () => {
+  try { localStorage.setItem(STORAGE_KEY, JSON.stringify(STATE)); } catch (e) {}
+  try { writeDailySnapshot(); } catch (e) {}
+});
+</script>
+</body>
+</html>
