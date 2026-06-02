@@ -613,7 +613,16 @@ function calcTotals(foods, portions) {
 }
 
 // ── State ─────────────────────────────────────────────────────────────────────
-function todayKey() { return new Date().toISOString().slice(0,10); }
+// Local-date day key (NOT UTC). Using toISOString() here rolled the day over
+// at UTC midnight, which is evening/early-morning in most timezones and put
+// "today" out of step with the user's actual day. This matches the local-date
+// logic used by snapshotKeyForToday() so the two never disagree.
+function todayKey() {
+  const d = new Date();
+  const m   = String(d.getMonth() + 1).padStart(2, "0");
+  const day = String(d.getDate()).padStart(2, "0");
+  return d.getFullYear() + "-" + m + "-" + day;
+}
 
 function freshState() {
   const profile = {...DEFAULT_PROFILE};
@@ -2668,6 +2677,23 @@ window.addEventListener("pagehide", () => {
   try { localStorage.setItem(STORAGE_KEY, JSON.stringify(STATE)); } catch (e) {}
   try { writeDailySnapshot(); } catch (e) {}
 });
+
+// Refresh on resume. An installed PWA is frozen in the background, so when the
+// user reopens it the next morning the screen still shows the day it last drew.
+// Re-render whenever the app becomes visible again; if the calendar day has
+// actually changed, also write a fresh snapshot for the new day.
+let lastRenderedDay = todayKey();
+function refreshOnResume() {
+  if (document.visibilityState !== "visible") return;
+  const now = todayKey();
+  if (now !== lastRenderedDay) {
+    lastRenderedDay = now;
+    try { writeDailySnapshot(); } catch (e) {}
+  }
+  render();
+}
+document.addEventListener("visibilitychange", refreshOnResume);
+window.addEventListener("pageshow", refreshOnResume);
 </script>
 </body>
 </html>
